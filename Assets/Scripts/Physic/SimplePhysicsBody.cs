@@ -1,93 +1,83 @@
 using UnityEngine;
 
+/// 极简 2D AABB 刚体 + Tilemap 碰撞（不依赖 Unity 内置物理）
+[RequireComponent(typeof(Transform))]
 public class SimplePhysicsBody : MonoBehaviour
 {
-    /* ─────────── 可调参数 ─────────── */
-    [Tooltip("包围盒半尺寸（世界单位）")]
+    [Header("尺寸 / 重力")]
     public Vector2 halfSize = new(0.45f, 0.45f);
+    public float   gravity  = -30f;
 
-    [Tooltip("重力缩放系数 1 = 正常重力，0 = 漂浮")]
-    public float gravityScale = 1f;
+    [HideInInspector] public Vector2 velocity;
+    [HideInInspector] public bool    grounded;
 
-    /* ─────────── 运行时状态 ─────────── */
-    [HideInInspector] public Vector2 velocity;    // 当前速度
-    [HideInInspector] public bool    grounded;    // true = 站在地面
+    const float STEP = 0.05f; // 单帧最大分片位移
 
-    const float STEP = 0.05f;                     // 穿隧分片尺寸
+    void Start()        => PhysicsEngine.I.Register(this);
+    void OnDisable()    { if (PhysicsEngine.I) PhysicsEngine.I.Unregister(this); }
 
-    /* ─────────── 生命周期 ─────────── */
-
-    // Awake 里可放一些初始化（可选）
-    void Awake() { }
-
-    // ★ 改用 Start 注册，保证 PhysicsEngine 已经 Awake
-    void Start()
-    {
-        PhysicsEngine.I.Register(this);
-    }
-
-    // 反注册仍写在 OnDisable，做空指针保护
-    void OnDisable()
-    {
-        if (PhysicsEngine.I != null)
-            PhysicsEngine.I.Unregister(this);
-    }
-
-    /// <summary>被 PhysicsEngine 每帧调用</summary>
+    /* -------------------- 主循环：由 PhysicsEngine 调用 -------------------- */
     public void Tick(float dt)
     {
-        // 1) 施加重力
-        velocity += PhysicsEngine.I.gravity * gravityScale * dt;
+        velocity.y += gravity * dt;
         grounded = false;
 
-        // 2) 先 X 再 Y 逐轴移动
-        MoveAxis(ref velocity.x, Vector2.right, dt);
-        MoveAxis(ref velocity.y, Vector2.up,    dt);
+        MoveAxis(ref velocity.x, Vector2.right, dt); // 先水平
+        MoveAxis(ref velocity.y, Vector2.up,    dt); // 再垂直
     }
 
-    /* ─────────── 单轴移动 + 碰撞分离 ─────────── */
+    /* ------------------------ 下面都是内部工具 ---------------------------- */
+
     void MoveAxis(ref float vAxis, Vector2 axis, float dt)
     {
-        float move      = vAxis * dt;
-        float direction = Mathf.Sign(move);
-        float remaining = Mathf.Abs(move);
+        float move = vAxis * dt;
+        float dir  = Mathf.Sign(move);
+        float rest = Mathf.Abs(move);
 
-        while (remaining > 0f)
+        while (rest > 0f)
         {
-            float step = Mathf.Min(STEP, remaining);
-            Vector2 next = (Vector2)transform.position + axis * step * direction;
+            float step = Mathf.Min(STEP, rest);
+            Vector2 nextPos = (Vector2)transform.position + axis * step * dir;
 
-            if (Collides(next))
+            if (HitTile(nextPos))
             {
-                vAxis = 0f;                              // 撞到就清速度
-                if (axis == Vector2.up && direction < 0) // 往下撞，视为落地
-                    grounded = true;
+                while (HitTile(nextPos))                    // ← 用 nextPos 回退
+                    nextPos -= axis * 0.001f * dir;
+
+                transform.position = (Vector3)nextPos;      // ← 最终写回
+                vAxis = 0f;
+                if (axis == Vector2.up && dir < 0) grounded = true;
                 return;
             }
 
-            transform.position = next;                   // 真正移动
-            remaining         -= step;
+            transform.position = nextPos;
+            rest -= step;
         }
+
     }
 
-    /* ─────────── 4 点采样 AABB vs Tilemap ─────────── */
-    bool Collides(Vector2 pos)
+    bool HitTile(Vector2 pos)
     {
         Vector2 min = pos - halfSize;
         Vector2 max = pos + halfSize;
+        float midY = (min.y + max.y) * 0.5f;
 
-        return  TilemapWorld.I.IsSolid(new(min.x, min.y)) ||
-                TilemapWorld.I.IsSolid(new(min.x, max.y)) ||
-                TilemapWorld.I.IsSolid(new(max.x, min.y)) ||
-                TilemapWorld.I.IsSolid(new(max.x, max.y));
+        // 左边 3 点
+        if (IsSolid(min.x, min.y) || IsSolid(min.x, midY) || IsSolid(min.x, max.y)) return true;
+        // 右边 3 点
+        if (IsSolid(max.x, min.y) || IsSolid(max.x, midY) || IsSolid(max.x, max.y)) return true;
+
+        return false;
     }
 
+    static bool IsSolid(float x, float y)
+        => TilemapWorld.I.IsSolid(new Vector2(x, y));
+
 #if UNITY_EDITOR
-    /* ─────────── Scene 视图可视化 ─────────── */
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(transform.position, halfSize * 2f);
+        Gizmos.DrawWireCube(transform.position, halfSize * 2);
     }
 #endif
 }

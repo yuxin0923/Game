@@ -1,5 +1,6 @@
 // Assets/Scripts/Player/Player.cs
 using UnityEngine;
+using World; 
  // 引入自定义的 SimplePhysicsBody 脚本
 namespace Player
 {
@@ -17,13 +18,18 @@ namespace Player
         [Tooltip("起跳初速度（m/s）")]
         public float jumpSpeed = 15f;
 
+        public int keyCount { get; private set; }
+        /* 便于 Key 脚本获得包围盒 */
+        public Vector2 Pos => transform.position;
+        public Vector2 Half => body.halfSize;
+
         /* ---------- 组件引用 ---------- */
         SimplePhysicsBody body;     // 自己写的刚体脚本
         // Flashlight torch;           // 如果没挂手电，可为 null
 
         void Awake()
         {
-            body  = GetComponent<SimplePhysicsBody>();
+            body = GetComponent<SimplePhysicsBody>();
             // torch = GetComponent<Flashlight>();   // 可选组件
         }
 
@@ -52,5 +58,28 @@ namespace Player
         /* ------------------------------------------------ */
         /* 这里可以继续加 Dash()、WallJump() 等高级动作接口    */
         /* ------------------------------------------------ */
+        public void AddKey()
+        {
+            keyCount++;
+            Debug.Log($"Key collected! total = {keyCount}");
+        }
+
+        public void TeleportToNearestBurningTorch()
+        {
+            Torch target = Torch.GetNearestBurning(transform.position);
+            if (target == null) return;
+
+            Vector2 half = body.halfSize;                  // 已有的刚体盒半尺寸
+            Vector3 pos  = target.transform.position;
+            pos.y += half.y + 0.05f;                       // 稍微抬高，避免嵌砖
+            transform.position = pos;
+
+            body.velocity = Vector2.zero;                       // 清速度
+        }
+
+
+    
+
+
     }
 }
