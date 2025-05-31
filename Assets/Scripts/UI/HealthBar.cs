@@ -14,7 +14,9 @@ public class HealthBar : MonoBehaviour
         if (flashlight != null)
         {
             // 获取当前的电量百分比
-            float targetFill = flashlight.GetCurrentCharge() / flashlight.maxCharge;
+            //float targetFill = flashlight.GetCurrentCharge() / flashlight.maxCharge;
+            float targetFill = flashlight.ChargePercent;   // 已经 0~1
+
 
             // 使用 Lerp 函数来平滑变化血条
             healthBarFill.fillAmount = Mathf.Lerp(healthBarFill.fillAmount, targetFill, fillSpeed * Time.deltaTime);

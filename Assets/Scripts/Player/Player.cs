@@ -22,6 +22,11 @@ namespace Player
         /* 便于 Key 脚本获得包围盒 */
         public Vector2 Pos => transform.position;
         public Vector2 Half => body.halfSize;
+                // 新增：对 Flashlight 的引用
+        [Header("Flashlight (Charge)")]
+        public Flashlight flashlight;         // 拖拽场景中的 Player 上的 Flashlight 组件
+        [Tooltip("靠近多远的已点燃火把开始充电（单位：米）")]
+        public float rechargeRange = 1.2f;
 
         /* ---------- 组件引用 ---------- */
         SimplePhysicsBody body;     // 自己写的刚体脚本
@@ -31,6 +36,12 @@ namespace Player
         {
             body = GetComponent<SimplePhysicsBody>();
             // torch = GetComponent<Flashlight>();   // 可选组件
+        }
+        
+        void Update()
+        {
+            HandleRechargeProximity();
+            // 其他输入：Move/Jump/ToggleTorch/Teleport 等
         }
 
         /* ========== 供 ICommand / AI 调用的接口 ========== */
@@ -47,14 +58,6 @@ namespace Player
             if (body.grounded)
                 body.velocity.y = jumpSpeed;
         }
-
-        /// 手电开关（如果场景挂了 Flashlight）
-        // public void ToggleTorch()
-        // {
-        //     if (torch != null)
-        //         torch.Switch();
-        // }
-
         /* ------------------------------------------------ */
         /* 这里可以继续加 Dash()、WallJump() 等高级动作接口    */
         /* ------------------------------------------------ */
@@ -62,6 +65,25 @@ namespace Player
         {
             keyCount++;
             Debug.Log($"Key collected! total = {keyCount}");
+        }
+        
+        /* ====== 新增：处理“靠近火把” 充/放电 ====== */
+        void HandleRechargeProximity()
+        {
+            if (flashlight == null) return;   // 如果没挂 Flashlight 组件，直接退出
+
+            // 1. 查找玩家周围是否有“点燃的火把”在圆形范围内
+            Torch near = Torch.GetNearestInRadius(transform.position, rechargeRange);
+            if (near != null && near.isOn)
+            {
+                // 只要找到了一个点燃的就开始给手电充电
+                flashlight.StartRecharge();
+            }
+            else
+            {
+                // 否则离开范围，停止充电
+                flashlight.StopRecharge();
+            }
         }
 
         public void TeleportToNearestBurningTorch()
@@ -78,7 +100,21 @@ namespace Player
         }
 
 
-    
+        /// 切换最近的火把状态（点燃 ⇄ 熄灭）
+        public void ToggleNearestTorch(float radius = 1.2f)
+        {
+            Torch t = Torch.GetNearestInRadius(transform.position, radius);
+            if (t != null)
+                t.Switch();                // 点燃 ⇄ 熄灭
+        }
+
+        // Player 类里，放在其他 public 方法下面
+        public void Die()
+        {
+            Debug.Log("Player died: out of battery");
+            // TODO: 这里可触发 UIManager.GameOver()、播放动画等
+            Destroy(gameObject);        // 先用最简单的销毁
+        }
 
 
     }
