@@ -86,18 +86,49 @@ namespace Player
             }
         }
 
-        public void TeleportToNearestBurningTorch()
+        /// 切换最近的火把状态并传送到最近的点燃火把上方
+        public void TeleportToNearestBurningTorch(float interactRange = 1.2f)
         {
-            Torch target = Torch.GetNearestBurning(transform.position);
-            if (target == null) return;
+            /*-----------------------------------------------------------
+            * ① 先确认玩家脚下是否真的“站在一盏火把上”
+            *    且这盏火把正处于点燃状态；否则瞬移无效
+            *----------------------------------------------------------*/
+            Torch curr = Torch.GetNearestInRadius(transform.position, interactRange);
+            if (curr == null || !curr.isOn)
+                return;                                         // A. 没火把 / B. 火把没点燃 → 直接退出
 
-            Vector2 half = body.halfSize;                  // 已有的刚体盒半尺寸
+            /*-----------------------------------------------------------
+            * ② 在所有火把里寻找“离玩家最近、且不是同一盏”的
+            *    其它点燃火把 B
+            *----------------------------------------------------------*/
+            Torch[] torches = Object.FindObjectsOfType<Torch>();
+            Torch   target  = null;
+            float   bestSq  = float.PositiveInfinity;
+            Vector2 me      = transform.position;
+
+            foreach (var t in torches)
+            {
+                if (!t.isOn || t == curr) continue;             // 只考虑点燃 & 非当前这盏
+                float sq = ((Vector2)t.transform.position - me).sqrMagnitude;
+                if (sq < bestSq)
+                {
+                    bestSq = sq;
+                    target = t;
+                }
+            }
+
+            if (target == null) return;                        // 场景里没有其它点燃火把 → 不移动
+
+            /*-----------------------------------------------------------
+            * ③ 把玩家传送到目标火把正上方一点
+            *----------------------------------------------------------*/
+            Vector2 half = body.halfSize;
             Vector3 pos  = target.transform.position;
-            pos.y += half.y + 0.05f;                       // 稍微抬高，避免嵌砖
+            pos.y += half.y + 0.05f;                           // 微抬高避免卡砖
             transform.position = pos;
-
-            body.velocity = Vector2.zero;                       // 清速度
+            body.velocity = Vector2.zero;
         }
+
 
 
         /// 切换最近的火把状态（点燃 ⇄ 熄灭）

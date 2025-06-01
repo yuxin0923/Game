@@ -68,6 +68,14 @@ public class Flashlight : MonoBehaviour
         }
     }
 
+    public void DrainAll()
+    {
+        CurrentCharge = 0f;
+        // 立即更新一次灯光强度，保证视觉上熄灭
+        if (light2D)
+            light2D.intensity = 0f;
+    }
+
     // 供 Player 或外部调用
     public void StartRecharge() => isRecharging = true;
     public void StopRecharge()  => isRecharging = false;

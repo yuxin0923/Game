@@ -80,11 +80,7 @@ namespace World
                 }
             }
 
-            // 2) 玩家按 L 键，且“距离在 hintRange 内”，就切换本火把的开/关
-            if (Input.GetKeyDown(KeyCode.L) && PlayerIsNear())
-            {
-                Switch();
-            }
+
 
             // 3) 当玩家靠近且火把当前是开启状态（isOn == true）时，
             //    就把 keyM (“按 M 传送到最近燃烧的火把”) 提示显示，否则隐藏
@@ -119,6 +115,7 @@ namespace World
             isOn = on;
             animator.SetBool(kIsOnParam, isOn);
             ApplyLightIntensity(isOn);
+            Debug.Log($"{name} switched: " + isOn);   // 临时打印
         }
 
         //——————————————————————————
@@ -149,24 +146,29 @@ namespace World
         // 静态方法：返回最近一个已经“点燃(isOn==true)”的火把
         // 如果找不到则返回 null
         //——————————————————————————
-        public static Torch GetNearestBurning(Vector2 worldPos)
-        {
-            Torch[] torches    = Object.FindObjectsOfType<Torch>();
-            Torch   bestTorch  = null;
-            float   bestSqr    = float.PositiveInfinity;
 
-            foreach (var t in torches)
+        // Torch.cs
+        public static Torch GetNearestBurning(Vector2 worldPos, float minDistance)
+        {
+            float minDistSqr = minDistance * minDistance;
+            Torch bestTorch  = null;
+            float bestSqr    = float.PositiveInfinity;
+
+            foreach (var t in FindObjectsOfType<Torch>())
             {
-                if (!t.isOn) continue;  // 只考虑点燃状态
-                float sqr = (t.transform.position - (Vector3)worldPos).sqrMagnitude;
+                if (!t.isOn) continue;                         // 只考虑点燃的
+                float sqr = ((Vector2)t.transform.position - worldPos).sqrMagnitude;
+
+                if (sqr < minDistSqr) continue;                // 离自己太近 ⇒ 认为“同一盏”，忽略
                 if (sqr < bestSqr)
                 {
-                    bestSqr   = sqr;
                     bestTorch = t;
+                    bestSqr   = sqr;
                 }
             }
-            return bestTorch;
+            return bestTorch;                                  // 可能为 null
         }
+
 
         //——————————————————————————
         // 静态方法：返回“最近一个半径 <= radius”范围内的火把（不管是否点燃）
@@ -175,14 +177,14 @@ namespace World
         public static Torch GetNearestInRadius(Vector3 playerPos, float radius)
         {
             Torch bestTorch = null;
-            float bestSqr   = radius * radius;
+            float bestSqr = radius * radius;
 
             foreach (var t in Object.FindObjectsOfType<Torch>())
             {
                 float sqr = (t.transform.position - playerPos).sqrMagnitude;
                 if (sqr <= bestSqr)
                 {
-                    bestSqr   = sqr;
+                    bestSqr = sqr;
                     bestTorch = t;
                 }
             }
