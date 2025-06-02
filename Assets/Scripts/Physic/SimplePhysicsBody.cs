@@ -72,6 +72,17 @@ public class SimplePhysicsBody : MonoBehaviour
 
     static bool IsSolid(float x, float y)
         => TilemapWorld.I.IsSolid(new Vector2(x, y));
+    
+    /// <summary>
+    /// NEW
+    /// 对外水平移动接口：dir = -1/0/+1
+    /// 保持自身 Tick/碰撞逻辑不变
+    /// </summary>
+    public void MoveHoriz(float dir, float speed)
+    {
+        velocity.x = dir * speed;
+    }
+
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
