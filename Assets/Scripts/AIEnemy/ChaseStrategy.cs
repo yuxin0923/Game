@@ -3,22 +3,34 @@ using UnityEngine;
 
 namespace AIEnemy
 {
-    public class ChaseStrategy : IEnemyStrategy
+public class ChaseStrategy : IEnemyStrategy
+{
+    public float speed = 3.5f;
+    public float attackRange = 1f;
+
+    public bool Execute(AIEnemyManager ctx, float dt)
     {
-        public float speed = 3.5f;      // 追击速度
-        public float attackRange = 1f;  // 进入攻击的距离
+        if (!ctx.PlayerInSight)
+            return true; // 走回 Patrol
 
-        public bool Execute(AIEnemyManager ctx, float dt)
+        // 1. 算水平方向：目标在我左边→dir=-1，在右边→dir=+1
+        float dx = ctx.PlayerTf.position.x - ctx.transform.position.x;
+        int chaseDir = dx > 0 ? +1 : -1;
+
+        // 2. 判是否进入攻击范围
+        if (Mathf.Abs(dx) <= attackRange)
         {
-            if (!ctx.PlayerInSight) return true;         // 看不见 → 回 Patrol
-
-            float dx = ctx.PlayerTf.position.x - ctx.transform.position.x;
-            if (Mathf.Abs(dx) <= attackRange) return true; // 够近 → Attack
-
-            ctx.Body.MoveHoriz(Mathf.Sign(dx), speed);
-            ctx.SetAnimMove(speed);
-
-            return false;
+            // 进入 Attack 状态
+            return true;
         }
+
+        // 3. 移动 & 动画
+        ctx.Body.MoveHoriz(chaseDir, speed);
+        //    传 chaseDir*speed 给 SetAnimMove，第二个参数标记为“正在追击”
+        ctx.SetAnimMove(chaseDir * speed, true);
+
+        return false; // 仍旧留在 Chase
     }
+}
+
 }

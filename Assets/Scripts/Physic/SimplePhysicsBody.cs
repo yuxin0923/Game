@@ -6,7 +6,10 @@ public class SimplePhysicsBody : MonoBehaviour
 {
     [Header("尺寸 / 重力")]
     public Vector2 halfSize = new(0.45f, 0.45f);
-    public float   gravity  = -30f;
+        // ← 在这里新增一行属性，不要重复声明 halfSize
+    public Vector2 HalfSize => halfSize;
+    
+    public float gravity = -30f;
 
     [HideInInspector] public Vector2 velocity;
     [HideInInspector] public bool    grounded;

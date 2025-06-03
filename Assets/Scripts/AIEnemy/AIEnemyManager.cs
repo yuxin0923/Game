@@ -6,103 +6,179 @@ using AIEnemy;
 [RequireComponent(typeof(SimplePhysicsBody))]
 public class AIEnemyManager : MonoBehaviour
 {
-    /* ------------ Inspector 参数 ------------ */
-    [Header("===== 视距 & 玩家图层 =====")]
-    public float sight = 6f;
-    public LayerMask playerMask;   // 若需要射线，可自行使用
+    /* ===== Inspector ===== */
+    [Header("=== Detection ===")]
+    [Tooltip("圆形感知半径 (m)")]
+    public float sightRadius = 6f;
+    [Tooltip("视野角度(°)，0 表示 360° 无死角")]
+    [Range(0, 360)] public float fov = 120f;
+    [Tooltip("探测间隔 (秒)")]
+    [Min(0.02f)] public float detectInterval = 0.2f;
 
-    [Header("===== 巡逻参数 =====")]
+    [Header("=== Patrol ===")]
     public float patrolHalfDistance = 3f;
-    public float patrolSpeed        = 2f;
+    public float patrolSpeed = 2f;
 
-    [Header("===== 追击 / 攻击 =====")]
-    public float chaseSpeed  = 3.5f;
+    [Header("=== Chase / Attack ===")]
+    public float chaseSpeed = 3.5f;
     public float attackRange = 1f;
 
-    /* ------------ 运行时只读 ------------ */
+    /* ===== Runtime ===== */
     public EnemyState State { get; private set; } = EnemyState.Patrol;
-    public Transform  PlayerTf    { get; private set; }
+    public Transform PlayerTf { get; private set; }
     public SimplePhysicsBody Body { get; private set; }
 
-    /// 是否在“灯光 + 距离”探测范围内（可按需扩展为检测手电筒开关）
-    public bool PlayerInSight =>
-        PlayerTf &&
-        (PlayerTf.position - transform.position).sqrMagnitude < sight * sight;
+    public bool PlayerInSight => _playerInSight;
 
-    /* ------------ 私有字段 ------------ */
-    IEnemyStrategy current;
-    StrategyFactory factory => StrategyFactory.Instance;
+    /* ===== Private ===== */
+    private IEnemyStrategy _current;
+    private StrategyFactory _factory => StrategyFactory.Instance;
 
-    SpriteRenderer sr;
-    Animator       anim;
+    private SpriteRenderer _sr;
+    private Animator _anim;
 
-    /* ================= Unity 生命周期 ================= */
-    void Awake()
+    private bool _playerInSight;
+    private float _detectTimer;
+    // 新增：跟踪当前朝向，+1=面右, -1=面左
+    private int facingDir = +1; 
+
+    /* ================= Unity ================= */
+    private void Awake()
     {
         Body = GetComponent<SimplePhysicsBody>();
-        sr   = GetComponent<SpriteRenderer>();
-        anim = GetComponent<Animator>();
+        _sr = GetComponent<SpriteRenderer>();
+        _anim = GetComponent<Animator>();
 
         PlayerTf = FindObjectOfType<Player.Player>()?.transform;
 
-        SwitchState(EnemyState.Patrol);  // 初始即巡逻
+        SwitchState(EnemyState.Patrol);
     }
 
-    void Update()
+    private void Update()
     {
-        if (current == null) return;
+        /* --- Detection --- */
+        _detectTimer += Time.deltaTime;
+        if (_detectTimer >= detectInterval)
+        {
+            _detectTimer = 0f;
+            _playerInSight = DetectPlayer();
+        }
 
-        bool done = current.Execute(this, Time.deltaTime);
-        if (!done) return;
+        /* --- FSM --- */
+        if (_current == null) return;
+        if (!_current.Execute(this, Time.deltaTime)) return;
 
-        /* ------ 简易状态转换表 ------ */
         EnemyState next = State switch
         {
             EnemyState.Patrol  => EnemyState.Chase,
-            EnemyState.Chase   => (DistToPlayer() <= attackRange) ? EnemyState.Attack
-                                                                  : EnemyState.Patrol,
-            EnemyState.Attack  => (DistToPlayer() >  attackRange) ? EnemyState.Patrol
-                                                                  : EnemyState.Attack,
+            EnemyState.Chase   => (DistToPlayer() <= attackRange) ? EnemyState.Attack : EnemyState.Patrol,
+            EnemyState.Attack  => (DistToPlayer() > attackRange)   ? EnemyState.Patrol : EnemyState.Attack,
             _                  => EnemyState.Dead
         };
         SwitchState(next);
     }
 
-    /* =================== 动画封装 =================== */
-    public void SetAnimMove(float vx) => anim?.SetFloat("Speed", Mathf.Abs(vx));
-    public void SetAnimAttack()       => anim?.SetTrigger("Attack");
-    public void SetAnimDead()         => anim?.SetTrigger("Dead");
-
-    /* =================== 内部工具 =================== */
-    void SwitchState(EnemyState to)
+    /* ================= Detection Algorithm ================= */
+    private bool DetectPlayer()
     {
-        State   = to;
-        current = factory.Get(to);
+        if (!PlayerTf) return false;
 
-        /* --- 巡逻参数同步 & 初始化 --- */
-        if (to == EnemyState.Patrol && current is PatrolStrategy patrol)
+        Vector2 enemyPos = transform.position;
+        Vector2 playerPos = PlayerTf.position;
+
+        // 1. 距离圆
+        if ((playerPos - enemyPos).sqrMagnitude > sightRadius * sightRadius)
+            return false;
+
+        // 2. 视野角
+        if (fov > 0f && fov < 360f)
+        {
+            //Vector2 forward = Vector2.right * Mathf.Sign(transform.localScale.x);
+            //Vector2 forward = Vector2.left * Mathf.Sign(transform.localScale.x);
+            Vector2 forward = Vector2.right * facingDir;
+
+            Vector2 dir = (playerPos - enemyPos).normalized;
+            float cosHalf = Mathf.Cos(fov * 0.5f * Mathf.Deg2Rad);
+            if (Vector2.Dot(forward, dir) < cosHalf)
+                return false;
+        }
+
+        // 3. 瓦片 Raycast (Bresenham)
+        return LineOfSight.Clear(enemyPos, playerPos);
+    }
+
+    /* ================= Internals ================= */
+    private void SwitchState(EnemyState to)
+    {
+        State = to;
+        _current = _factory.Get(to);
+
+        // 同步参数
+        if (to == EnemyState.Patrol && _current is PatrolStrategy patrol)
             patrol.Init(transform.position, patrolHalfDistance, patrolSpeed);
 
-        /* --- 追击 / 攻击参数同步 --- */
-        if (to == EnemyState.Chase && current is ChaseStrategy chase)
+        if (to == EnemyState.Chase && _current is ChaseStrategy chase)
         {
-            chase.speed       = chaseSpeed;
+            chase.speed = chaseSpeed;
             chase.attackRange = attackRange;
         }
-        if (to == EnemyState.Attack && current is AttackStrategy atk)
-        {
-            // 这里可同步 Inspector 的 cooldown / damage 等
-        }
 
-        /* --- 动画触发 --- */
-        switch (to)
+        // 动画
+        if (to == EnemyState.Attack) SetAnimAttack();
+        if (to == EnemyState.Dead)   SetAnimDead();
+    }
+
+    private float DistToPlayer() => PlayerTf ? Vector2.Distance(transform.position, PlayerTf.position) : float.PositiveInfinity;
+
+    /* === Animation helpers === */
+    // 放在类里面原来 SetAnimMove 旁边
+    // 修改 SetFacing：让它只负责翻贴图和更新 facingDir
+    public void SetFacing(int dir)
+    {
+        if (dir == 0) return;           // 0 意味不动，可以保持原面朝
+        facingDir = dir > 0 ? +1 : -1;  // 标准化成 +1 / -1
+
+        Vector3 s = transform.localScale;
+        s.x = Mathf.Abs(s.x) * facingDir; // localScale.x = ±原始宽度
+        transform.localScale = s;
+    }
+
+
+    // 这里保留 SetAnimMove，但改为两个参数：水平速度 和 “是否在追击”
+    public void SetAnimMove(float vx, bool isChasing)
+    {
+        _anim?.SetFloat("Speed", Mathf.Abs(vx));
+        _anim?.SetBool("IsChasing", isChasing);
+
+        // ★ 只要 vx 非 0，就调用 SetFacing(vx>0?+1:-1)
+        if (Mathf.Abs(vx) > 0.001f)
         {
-            case EnemyState.Attack: SetAnimAttack(); break;
-            case EnemyState.Dead:   SetAnimDead();   break;
+            SetFacing((int)Mathf.Sign(vx));
         }
     }
 
-    float DistToPlayer()
-        => PlayerTf ? Vector2.Distance(transform.position, PlayerTf.position)
-                    : float.PositiveInfinity;
+    public void SetAnimAttack()       => _anim?.SetTrigger("Attack");
+    public void SetAnimDead()         => _anim?.SetTrigger("Dead");
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, sightRadius);
+
+        if (fov > 0f && fov < 360f)
+        {
+            Gizmos.color = Color.cyan;
+            //Vector3 fwd = Vector3.right * Mathf.Sign(transform.localScale.x);
+            //Vector3 fwd = Vector3.left * Mathf.Sign(transform.localScale.x);
+
+            Vector3 fwd = Vector3.right * facingDir;
+
+            Quaternion q1 = Quaternion.AngleAxis(+fov * 0.5f, Vector3.forward);
+            Quaternion q2 = Quaternion.AngleAxis(-fov * 0.5f, Vector3.forward);
+            Gizmos.DrawLine(transform.position, transform.position + q1 * fwd * sightRadius);
+            Gizmos.DrawLine(transform.position, transform.position + q2 * fwd * sightRadius);
+        }
+    }
+#endif
 }
