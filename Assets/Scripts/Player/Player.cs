@@ -22,7 +22,7 @@ namespace Player
         /* 便于 Key 脚本获得包围盒 */
         public Vector2 Pos => transform.position;
         public Vector2 Half => body.halfSize;
-                // 新增：对 Flashlight 的引用
+        // 新增：对 Flashlight 的引用
         [Header("Flashlight (Charge)")]
         public Flashlight flashlight;         // 拖拽场景中的 Player 上的 Flashlight 组件
         [Tooltip("靠近多远的已点燃火把开始充电（单位：米）")]
@@ -37,7 +37,7 @@ namespace Player
             body = GetComponent<SimplePhysicsBody>();
             // torch = GetComponent<Flashlight>();   // 可选组件
         }
-        
+
         void Update()
         {
             HandleRechargeProximity();
@@ -66,7 +66,7 @@ namespace Player
             keyCount++;
             Debug.Log($"Key collected! total = {keyCount}");
         }
-        
+
         /* ====== 新增：处理“靠近火把” 充/放电 ====== */
         void HandleRechargeProximity()
         {
@@ -102,9 +102,9 @@ namespace Player
             *    其它点燃火把 B
             *----------------------------------------------------------*/
             Torch[] torches = Object.FindObjectsOfType<Torch>();
-            Torch   target  = null;
-            float   bestSq  = float.PositiveInfinity;
-            Vector2 me      = transform.position;
+            Torch target = null;
+            float bestSq = float.PositiveInfinity;
+            Vector2 me = transform.position;
 
             foreach (var t in torches)
             {
@@ -123,7 +123,7 @@ namespace Player
             * ③ 把玩家传送到目标火把正上方一点
             *----------------------------------------------------------*/
             Vector2 half = body.halfSize;
-            Vector3 pos  = target.transform.position;
+            Vector3 pos = target.transform.position;
             pos.y += half.y + 0.05f;                           // 微抬高避免卡砖
             transform.position = pos;
             body.velocity = Vector2.zero;
@@ -140,11 +140,27 @@ namespace Player
         }
 
         // Player 类里，放在其他 public 方法下面
+        /* ====== 伤害处理 ====== */
+
         public void Die()
         {
             Debug.Log("Player died: out of battery");
             // TODO: 这里可触发 UIManager.GameOver()、播放动画等
             Destroy(gameObject);        // 先用最简单的销毁
+        }
+        
+        
+        public void OnAttacked(float amount)
+        {
+            if (flashlight != null)
+            {
+                flashlight.ReduceCharge(amount);
+            }
+            else
+            {
+                // 没有手电组件时直接死亡
+                Die();
+            }
         }
 
 

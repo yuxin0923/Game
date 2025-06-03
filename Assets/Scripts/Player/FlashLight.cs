@@ -76,6 +76,23 @@ public class Flashlight : MonoBehaviour
             light2D.intensity = 0f;
     }
 
+    public void ReduceCharge(float amount)
+    {
+        if (hasDied) return;
+
+        CurrentCharge -= amount;
+        CurrentCharge = Mathf.Max(CurrentCharge, 0f);
+        if (light2D)
+            light2D.intensity = CurrentCharge / maxCharge;
+
+        // 如果扣完了，就调用玩家的 Die()
+        if (CurrentCharge <= 0f && owner != null)
+        {
+            hasDied = true;
+            owner.Die();
+        }
+    }
+
     // 供 Player 或外部调用
     public void StartRecharge() => isRecharging = true;
     public void StopRecharge()  => isRecharging = false;

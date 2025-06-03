@@ -63,6 +63,30 @@ public class AIEnemyManager : MonoBehaviour
         SwitchState(EnemyState.Patrol);
     }
 
+    // private void Update()
+    // {
+    //     /* --- Detection --- */
+    //     _detectTimer += Time.deltaTime;
+    //     if (_detectTimer >= detectInterval)
+    //     {
+    //         _detectTimer = 0f;
+    //         _playerInSight = DetectPlayer();
+    //     }
+
+    //     /* --- FSM --- */
+    //     if (_current == null) return;
+    //     if (!_current.Execute(this, Time.deltaTime)) return;
+
+    //     EnemyState next = State switch
+    //     {
+    //         EnemyState.Patrol  => EnemyState.Chase,
+    //         EnemyState.Chase   => (DistToPlayer() <= attackRange) ? EnemyState.Attack : EnemyState.Patrol,
+    //         EnemyState.Attack  => (DistToPlayer() > attackRange)   ? EnemyState.Patrol : EnemyState.Attack,
+    //         _                  => EnemyState.Dead
+    //     };
+    //     SwitchState(next);
+    // }
+
     private void Update()
     {
         /* --- Detection --- */
@@ -75,13 +99,19 @@ public class AIEnemyManager : MonoBehaviour
 
         /* --- FSM --- */
         if (_current == null) return;
-        if (!_current.Execute(this, Time.deltaTime)) return;
+        if (!_current.Execute(this, Time.deltaTime)) 
+            return;
+
+        // 先计算“当前玩家是否仍在可攻击范围内”
+        float dist = 0f;
+        if (PlayerTf != null)
+            dist = Mathf.Abs(PlayerTf.position.x - transform.position.x);
 
         EnemyState next = State switch
         {
             EnemyState.Patrol  => EnemyState.Chase,
-            EnemyState.Chase   => (DistToPlayer() <= attackRange) ? EnemyState.Attack : EnemyState.Patrol,
-            EnemyState.Attack  => (DistToPlayer() > attackRange)   ? EnemyState.Patrol : EnemyState.Attack,
+            EnemyState.Chase   => (dist <= attackRange && _playerInSight) ? EnemyState.Attack : EnemyState.Patrol,
+            EnemyState.Attack  => (_playerInSight && dist <= attackRange) ? EnemyState.Attack : EnemyState.Chase,
             _                  => EnemyState.Dead
         };
         SwitchState(next);
@@ -168,6 +198,11 @@ public class AIEnemyManager : MonoBehaviour
 
     public void SetAnimAttack()       => _anim?.SetTrigger("Attack");
     public void SetAnimDead()         => _anim?.SetTrigger("Dead");
+
+    // Assets/Scripts/AIEnemy/AIEnemyManager.cs
+    public void SetAnimCatchPlayer() => _anim?.SetTrigger("CatchPlayer");
+
+    
 
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
