@@ -43,7 +43,9 @@ public class AIEnemyManager : MonoBehaviour
     private bool _playerInSight;
     private float _detectTimer;
     // 新增：跟踪当前朝向，+1=面右, -1=面左
-    private int facingDir = +1; 
+    private int facingDir = -1; 
+    private float _baseScaleX;     // 记录原始 x 缩放
+    private int   _graphicDir;     // 贴图默认朝向：右=+1，左=-1
 
     /* ================= Unity ================= */
     private void Awake()
@@ -51,6 +53,10 @@ public class AIEnemyManager : MonoBehaviour
         Body = GetComponent<SimplePhysicsBody>();
         _sr = GetComponent<SpriteRenderer>();
         _anim = GetComponent<Animator>();
+        /* === 关键两行 === */
+        _baseScaleX = transform.localScale.x;
+        _graphicDir = _baseScaleX >= 0 ? +1 : -1;
+
 
         PlayerTf = FindObjectOfType<Player.Player>()?.transform;
 
@@ -135,17 +141,17 @@ public class AIEnemyManager : MonoBehaviour
 
     /* === Animation helpers === */
     // 放在类里面原来 SetAnimMove 旁边
-    // 修改 SetFacing：让它只负责翻贴图和更新 facingDir
+    // 修改 SetFacing：让它只负责翻贴图和更新 facingDir    /* ---------- 修改 SetFacing ---------- */
     public void SetFacing(int dir)
     {
-        if (dir == 0) return;           // 0 意味不动，可以保持原面朝
-        facingDir = dir > 0 ? +1 : -1;  // 标准化成 +1 / -1
+        if (dir == 0) return;          // 0 = 保持原朝向
+        facingDir = dir > 0 ? +1 : -1; // +1=向右，-1=向左
 
-        Vector3 s = transform.localScale;
-        s.x = Mathf.Abs(s.x) * facingDir; // localScale.x = ±原始宽度
+        Vector3 s  = transform.localScale;
+        // 公式：绝对值 × 移动方向 × 贴图默认朝向
+        s.x = Mathf.Abs(_baseScaleX) * facingDir * _graphicDir;
         transform.localScale = s;
     }
-
 
     // 这里保留 SetAnimMove，但改为两个参数：水平速度 和 “是否在追击”
     public void SetAnimMove(float vx, bool isChasing)

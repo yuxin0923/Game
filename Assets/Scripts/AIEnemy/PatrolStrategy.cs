@@ -5,74 +5,90 @@ namespace AIEnemy
 {
     public class PatrolStrategy : IEnemyStrategy
     {
-        private float _leftX, _rightX;
-        private int   _dir;
-        private float speed;
+        float _leftX, _rightX;
+        int   _dir;
+        float _speed;
 
-        // 保险丝
-        private float _prevX;
-        private int   _stuckFrames;
+        float _prevX;
+        int   _stuckFrames;
+        float _flipCooldown;
 
-        public void Init(Vector2 startPos, float halfDistance, float speed)
+        public void Init(Vector2 start, float halfDist, float speed)
         {
-            _leftX  = startPos.x - halfDistance;
-            _rightX = startPos.x + halfDistance;
-            _dir    = -1;
-            this.speed = speed;
+            _leftX  = start.x - halfDist;
+            _rightX = start.x + halfDist;
 
-            _prevX = startPos.x;
+            _dir    = -1;          // 初始朝向向左
+            _speed  = speed;
+
+            
+
+            _prevX  = start.x;
             _stuckFrames = 0;
+            _flipCooldown = 0f;
         }
 
         public bool Execute(AIEnemyManager ctx, float dt)
         {
-            /* --- 切到追逐 --- */
-            if (ctx.PlayerInSight) return true;
+            /* ---------- 1. 视野检测 ---------- */
+            if (ctx.PlayerInSight)      // 看到玩家 → 切 Chase
+                return true;
 
-            Vector2 pos  = ctx.transform.position;
-            Vector2 half = ctx.Body.HalfSize;
-            const  float δ = 0.12f;                    // NEW: 加大 δ
+            /* ---------- 2. 几何量 ---------- */
+            var pos  = ctx.transform.position;
+            var half = ctx.Body.HalfSize;
+            const float δ = 0.03f;      // 微小偏移
 
-            /* --- 预测下一帧想去哪里 --- */
-            float nextX      = pos.x + _dir * speed * dt * 1.5f;      // 乘 1.5 给点余量
-            Vector2 nextLead = new(nextX + (_dir > 0 ?  half.x : -half.x) + δ, pos.y);
+            /* ---------- 3. 探针取样 ---------- */
+            //   3-A  “撞墙探针”抬高到腰部
+            Vector2 wallProbe = new Vector2(
+                pos.x + _dir * (half.x + δ),
+                pos.y + half.y * 0.4f              // 抬高 40 %
+            );
+            bool wallAhead = TilemapWorld.I.IsSolid(wallProbe);
 
-            bool wallAhead =
-                TilemapWorld.I.IsSolid(nextLead + new Vector2(0,  half.y - δ)) ||
-                TilemapWorld.I.IsSolid(nextLead)                               ||
-                TilemapWorld.I.IsSolid(nextLead + new Vector2(0, -half.y + δ));
+            //   3-B  “悬崖探针”仍放脚下
+            Vector2 gapProbe = new Vector2(
+                wallProbe.x,
+                pos.y - half.y - δ
+            );
+            bool gapAhead = !TilemapWorld.I.IsSolid(gapProbe);
 
-            Vector2 footNext = nextLead + new Vector2(0, -(half.y + δ));
-            bool gapAhead = !TilemapWorld.I.IsSolid(footNext);
-            #if UNITY_EDITOR
-            Debug.DrawLine(pos,       nextLead, Color.red);     // 红：预测墙探测线
-            Debug.DrawLine(nextLead,  footNext, Color.yellow);  // 黄：预测悬崖探测线
-            #endif
-
-            /* --- 卡墙保险丝：2 帧没动也翻向 --- */
-            if (Mathf.Abs(pos.x - _prevX) < 0.005f)   // NEW: 阈值扩大
-            {
+            /* ---------- 4. 卡墙保险丝 ---------- */
+            if (Mathf.Abs(pos.x - _prevX) < 0.001f)
                 _stuckFrames++;
-                if (_stuckFrames >= 2) wallAhead = true;   // 叠加到检测里
-            }
-            else _stuckFrames = 0;                         // 恢复计数
+            else
+                _stuckFrames = 0;
             _prevX = pos.x;
 
-            /* --- 巡逻边界 --- */
-            if ((_dir < 0 && pos.x <= _leftX) || (_dir > 0 && pos.x >= _rightX))
-                _dir *= -1;
+            if (_stuckFrames > 10)      // ~0.2 s 原地未动
+                wallAhead = true;
 
-            /* --- 真正翻向 --- */
-            if (wallAhead || gapAhead)
-                _dir *= -1;
+            /* ---------- 5. 翻面逻辑 ---------- */
+            _flipCooldown = Mathf.Max(0, _flipCooldown - dt);
 
-            /* --- 移动 & 动画 --- */
-            ctx.Body.MoveHoriz(_dir, speed);
-            ctx.SetAnimMove(_dir * speed, false);
-            return false;
+            bool needFlip = false;
+            if (_flipCooldown <= 0f)
+            {
+                // 5-A 触到巡逻边界
+                if (_dir < 0 && pos.x <= _leftX  + 0.02f) needFlip = true;
+                if (_dir > 0 && pos.x >= _rightX - 0.02f) needFlip = true;
+
+                // 5-B 撞墙 / 悬崖
+                if (wallAhead || gapAhead) needFlip = true;
+            }
+
+            if (needFlip)
+            {
+                _dir *= -1;
+                _flipCooldown = 0.2f;   // 0.2 s 冷却
+            }
+
+            /* ---------- 6. 实际移动 ---------- */
+            ctx.Body.MoveHoriz(_dir, _speed);
+            ctx.SetAnimMove(_dir * _speed, false);   // false=Patrol
+
+            return false;                           // 继续留在 Patrol
         }
-
     }
-
-
 }
