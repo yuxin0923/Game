@@ -284,7 +284,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 4
   m_Sprite: {fileID: 238803862, guid: 7307adb7f1a16a144936284746f1e9b7, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -557,8 +557,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce373cabcdf17524a97ea0901ba7527e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 8
   sightRadius: 6
-  fov: 31
+  fov: 360
   detectInterval: 0.2
   patrolHalfDistance: 3
   patrolSpeed: 0.5
@@ -14390,11 +14393,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1067932212819968913, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -605.09
+      value: -538
       objectReference: {fileID: 0}
     - target: {fileID: 1067932212819968913, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 390.93
+      value: 360
       objectReference: {fileID: 0}
     - target: {fileID: 1912778341109192433, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_Pivot.x
@@ -14486,11 +14489,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7218089558619386857, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -617.15155
+      value: -550.73
       objectReference: {fileID: 0}
     - target: {fileID: 7218089558619386857, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 392.6156
+      value: 358.31
       objectReference: {fileID: 0}
     - target: {fileID: 8446539873790727216, guid: d385907376fe72f469a631dce5c752cc, type: 3}
       propertyPath: m_AnchoredPosition.x

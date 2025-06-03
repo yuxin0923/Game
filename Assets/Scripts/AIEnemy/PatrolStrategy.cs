@@ -1,61 +1,78 @@
-// Assets/Scripts/AI/PatrolStrategy.cs
+// Assets/Scripts/AIEnemy/PatrolStrategy.cs
 using UnityEngine;
 
 namespace AIEnemy
 {
-public class PatrolStrategy : IEnemyStrategy
-{
-    private float _leftX, _rightX;   // 巡逻边界
-    private int   _dir;              // 当前朝向：+1=右, -1=左
-    private float speed;
-
-    // 在初始化里，你会根据 Enemy 初始位置算 _leftX/_rightX、设定 _dir 初值
-    public void Init(Vector2 startPos, float halfDistance, float speed)
+    public class PatrolStrategy : IEnemyStrategy
     {
-        _leftX  = startPos.x - halfDistance;
-        _rightX = startPos.x + halfDistance;
-        _dir    = -1;      // 初始朝左；你根据美术默认朝向调这个值
-        this.speed = speed;
-    }
+        private float _leftX, _rightX;
+        private int   _dir;
+        private float speed;
 
-    public bool Execute(AIEnemyManager ctx, float dt)
-    {
-        // 1. 看到玩家就跳出，给 AIManager 切到 Chase
-        if (ctx.PlayerInSight)
-            return true;
+        // 保险丝
+        private float _prevX;
+        private int   _stuckFrames;
 
-        // 2. 获取当前坐标和碰撞盒半尺寸
-        Vector2 pos  = (Vector2)ctx.transform.position;
-        Vector2 half = ctx.Body.HalfSize;
-        const float δ = 0.05f;
-
-        // 3. 到巡逻边界掉头
-        if ((_dir < 0 && pos.x <= _leftX) || (_dir > 0 && pos.x >= _rightX))
+        public void Init(Vector2 startPos, float halfDistance, float speed)
         {
-            _dir *= -1;
+            _leftX  = startPos.x - halfDistance;
+            _rightX = startPos.x + halfDistance;
+            _dir    = -1;
+            this.speed = speed;
+
+            _prevX = startPos.x;
+            _stuckFrames = 0;
         }
 
-        // 4. 前置传感器：墙与悬崖检测
-        //    探测点1：前方微出碰撞盒 ((half.x + δ) * _dir, 0)
-        Vector2 wallProbe = pos + new Vector2((_dir > 0 ? half.x : -half.x) + δ, 0);
-        //    探测点2：前方微出，向下 ((half.y + δ))
-        Vector2 groundProbe = wallProbe + new Vector2(0, -(half.y + δ));
-
-        bool wallAhead = TilemapWorld.I.IsSolid(wallProbe);
-        bool gapAhead  = !TilemapWorld.I.IsSolid(groundProbe);
-
-        if (wallAhead || gapAhead)
+        public bool Execute(AIEnemyManager ctx, float dt)
         {
-            _dir *= -1;
+            /* --- 切到追逐 --- */
+            if (ctx.PlayerInSight) return true;
+
+            Vector2 pos  = ctx.transform.position;
+            Vector2 half = ctx.Body.HalfSize;
+            const  float δ = 0.12f;                    // NEW: 加大 δ
+
+            /* --- 预测下一帧想去哪里 --- */
+            float nextX      = pos.x + _dir * speed * dt * 1.5f;      // 乘 1.5 给点余量
+            Vector2 nextLead = new(nextX + (_dir > 0 ?  half.x : -half.x) + δ, pos.y);
+
+            bool wallAhead =
+                TilemapWorld.I.IsSolid(nextLead + new Vector2(0,  half.y - δ)) ||
+                TilemapWorld.I.IsSolid(nextLead)                               ||
+                TilemapWorld.I.IsSolid(nextLead + new Vector2(0, -half.y + δ));
+
+            Vector2 footNext = nextLead + new Vector2(0, -(half.y + δ));
+            bool gapAhead = !TilemapWorld.I.IsSolid(footNext);
+            #if UNITY_EDITOR
+            Debug.DrawLine(pos,       nextLead, Color.red);     // 红：预测墙探测线
+            Debug.DrawLine(nextLead,  footNext, Color.yellow);  // 黄：预测悬崖探测线
+            #endif
+
+            /* --- 卡墙保险丝：2 帧没动也翻向 --- */
+            if (Mathf.Abs(pos.x - _prevX) < 0.005f)   // NEW: 阈值扩大
+            {
+                _stuckFrames++;
+                if (_stuckFrames >= 2) wallAhead = true;   // 叠加到检测里
+            }
+            else _stuckFrames = 0;                         // 恢复计数
+            _prevX = pos.x;
+
+            /* --- 巡逻边界 --- */
+            if ((_dir < 0 && pos.x <= _leftX) || (_dir > 0 && pos.x >= _rightX))
+                _dir *= -1;
+
+            /* --- 真正翻向 --- */
+            if (wallAhead || gapAhead)
+                _dir *= -1;
+
+            /* --- 移动 & 动画 --- */
+            ctx.Body.MoveHoriz(_dir, speed);
+            ctx.SetAnimMove(_dir * speed, false);
+            return false;
         }
 
-        // 5. 移动 & 动画：注意 MoveHoriz 用的 dir 一定要等于面朝方向
-        ctx.Body.MoveHoriz(_dir, speed);
-        //    SetAnimMove 的第一个参数 vx = _dir * speed，本质上 vx>0→朝右，vx<0→朝左
-        ctx.SetAnimMove(_dir * speed, false);
-
-        return false; // 仍旧留在 Patrol 状态
     }
-}
+
 
 }

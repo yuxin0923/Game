@@ -6,6 +6,9 @@ using AIEnemy;
 [RequireComponent(typeof(SimplePhysicsBody))]
 public class AIEnemyManager : MonoBehaviour
 {
+    [Header("=== Environment ===")]
+    public LayerMask groundMask = ~0;   // 默认 Everything，可在 Inspector 调成 Ground
+
     /* ===== Inspector ===== */
     [Header("=== Detection ===")]
     [Tooltip("圆形感知半径 (m)")]
