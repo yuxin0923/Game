@@ -33,6 +33,8 @@ public class AIEnemyManager : MonoBehaviour
     public SimplePhysicsBody Body { get; private set; }
 
     public bool PlayerInSight => _playerInSight;
+    // 新增：公共Facing属性
+    public int Facing { get; private set; } = -1;  // +1=面右, -1=面左
 
     /* ===== Private ===== */
     private IEnemyStrategy _current;
@@ -68,6 +70,67 @@ public class AIEnemyManager : MonoBehaviour
         SwitchState(EnemyState.Patrol);
     }
 
+private void Update()
+{
+    /* --- Detection --- */
+    _detectTimer += Time.deltaTime;
+    if (_detectTimer >= detectInterval)
+    {
+        _detectTimer = 0f;
+        _playerInSight = DetectPlayer();
+    }
+
+    /* --- FSM --- */
+    if (_current == null) return;
+    
+    // 计算真实距离（包含垂直分量）
+    float dist = PlayerTf ? Vector2.Distance(transform.position, PlayerTf.position) : float.PositiveInfinity;
+    
+    // 状态切换逻辑（优先级：Attack > Chase > Patrol）
+    EnemyState next = State;
+    switch (State)
+    {
+        case EnemyState.Patrol:
+            if (_playerInSight) next = EnemyState.Chase;
+            break;
+            
+        case EnemyState.Chase:
+            // 直接进入攻击状态的条件（忽略冷却）
+            if (dist <= attackRange) 
+            {
+                next = EnemyState.Attack;
+            }
+            // 玩家离开视野或太远
+            else if (!_playerInSight || dist > sightRadius)
+            {
+                next = EnemyState.Patrol;
+            }
+            break;
+            
+        case EnemyState.Attack:
+            // 玩家超出攻击范围(带缓冲) → 回Chase
+            if (dist > attackRange * 1.2f) 
+            {
+                next = EnemyState.Chase;
+            }
+            // 玩家离开视野 → 回Patrol
+            else if (!_playerInSight)
+            {
+                next = EnemyState.Patrol;
+            }
+            break;
+    }
+    
+    // 立即切换状态
+    if (next != State)
+    {
+        SwitchState(next);
+    }
+    
+    // 执行当前状态逻辑
+    _current.Execute(this, Time.deltaTime);
+}
+
     // private void Update()
     // {
     //     /* --- Detection --- */
@@ -80,47 +143,35 @@ public class AIEnemyManager : MonoBehaviour
 
     //     /* --- FSM --- */
     //     if (_current == null) return;
-    //     if (!_current.Execute(this, Time.deltaTime)) return;
+    //     if (!_current.Execute(this, Time.deltaTime))
+    //         return;
 
+    //     // 先计算“当前玩家是否仍在可攻击范围内”
+    //     float dist = 0f;
+    //     if (PlayerTf != null)
+    //         dist = Mathf.Abs(PlayerTf.position.x - transform.position.x);
+    //         // 优化状态切换逻辑
     //     EnemyState next = State switch
     //     {
-    //         EnemyState.Patrol  => EnemyState.Chase,
-    //         EnemyState.Chase   => (DistToPlayer() <= attackRange) ? EnemyState.Attack : EnemyState.Patrol,
-    //         EnemyState.Attack  => (DistToPlayer() > attackRange)   ? EnemyState.Patrol : EnemyState.Attack,
-    //         _                  => EnemyState.Dead
+    //         EnemyState.Patrol => _playerInSight ? EnemyState.Chase : EnemyState.Patrol,
+            
+    //         EnemyState.Chase => (_playerInSight && DistToPlayer() <= attackRange) 
+    //             ? EnemyState.Attack 
+    //             : EnemyState.Patrol,
+            
+    //         EnemyState.Attack => (_playerInSight && DistToPlayer() <= attackRange * 1.2f) 
+    //             ? EnemyState.Attack 
+    //             : EnemyState.Chase,
+                
+    //         _ => EnemyState.Dead
     //     };
-    //     SwitchState(next);
+        
+    //     // 立即切换状态（无冷却）
+    //     if (next != State)
+    //     {
+    //         SwitchState(next);
+    //     }
     // }
-
-    private void Update()
-    {
-        /* --- Detection --- */
-        _detectTimer += Time.deltaTime;
-        if (_detectTimer >= detectInterval)
-        {
-            _detectTimer = 0f;
-            _playerInSight = DetectPlayer();
-        }
-
-        /* --- FSM --- */
-        if (_current == null) return;
-        if (!_current.Execute(this, Time.deltaTime)) 
-            return;
-
-        // 先计算“当前玩家是否仍在可攻击范围内”
-        float dist = 0f;
-        if (PlayerTf != null)
-            dist = Mathf.Abs(PlayerTf.position.x - transform.position.x);
-
-        EnemyState next = State switch
-        {
-            EnemyState.Patrol  => EnemyState.Chase,
-            EnemyState.Chase   => (dist <= attackRange && _playerInSight) ? EnemyState.Attack : EnemyState.Patrol,
-            EnemyState.Attack  => (_playerInSight && dist <= attackRange) ? EnemyState.Attack : EnemyState.Chase,
-            _                  => EnemyState.Dead
-        };
-        SwitchState(next);
-    }
 
     /* ================= Detection Algorithm ================= */
     private bool DetectPlayer()
@@ -152,26 +203,6 @@ public class AIEnemyManager : MonoBehaviour
     }
 
     /* ================= Internals ================= */
-    // private void SwitchState(EnemyState to)
-    // {
-    //     State = to;
-    //     _current = _factory.Get(to);
-
-    //     // 同步参数
-    //     if (to == EnemyState.Patrol && _current is PatrolStrategy patrol)
-    //         patrol.Init(transform.position, patrolHalfDistance, patrolSpeed);
-
-    //     if (to == EnemyState.Chase && _current is ChaseStrategy chase)
-    //     {
-    //         chase.speed = chaseSpeed;
-    //         chase.attackRange = attackRange;
-    //     }
-
-    //     // 动画
-    //     if (to == EnemyState.Attack) SetAnimAttack();
-    //     if (to == EnemyState.Dead)   SetAnimDead();
-    // }
-
     private void SwitchState(EnemyState to)
     {
         State = to;
@@ -203,14 +234,25 @@ public class AIEnemyManager : MonoBehaviour
     /* === Animation helpers === */
     // 放在类里面原来 SetAnimMove 旁边
     // 修改 SetFacing：让它只负责翻贴图和更新 facingDir    /* ---------- 修改 SetFacing ---------- */
+    // public void SetFacing(int dir)
+    // {
+    //     if (dir == 0) return;          // 0 = 保持原朝向
+    //     facingDir = dir > 0 ? +1 : -1; // +1=向右，-1=向左
+
+    //     Vector3 s  = transform.localScale;
+    //     // 公式：绝对值 × 移动方向 × 贴图默认朝向
+    //     s.x = Mathf.Abs(_baseScaleX) * facingDir * _graphicDir;
+    //     transform.localScale = s;
+    // }
     public void SetFacing(int dir)
     {
         if (dir == 0) return;          // 0 = 保持原朝向
-        facingDir = dir > 0 ? +1 : -1; // +1=向右，-1=向左
+        Facing = dir > 0 ? +1 : -1;    // 更新Facing属性
+        facingDir = Facing;             // 保持与现有字段的同步
 
         Vector3 s  = transform.localScale;
         // 公式：绝对值 × 移动方向 × 贴图默认朝向
-        s.x = Mathf.Abs(_baseScaleX) * facingDir * _graphicDir;
+        s.x = Mathf.Abs(_baseScaleX) * Facing * _graphicDir;
         transform.localScale = s;
     }
 

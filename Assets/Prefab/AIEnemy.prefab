@@ -108,7 +108,7 @@ MonoBehaviour:
   patrolHalfDistance: 4
   patrolSpeed: 0.5
   chaseSpeed: 2.5
-  attackRange: 0.5
+  attackRange: 1
 --- !u!95 &1529604279231893149
 Animator:
   serializedVersion: 5
