@@ -1,15 +1,15 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;  // 用到 Tilemap 组件
 using Player;              // 引用 Player.Player（请确保 Player.cs 里的命名空间是 Player）
-                 // 引用 SimplePhysicsBody（请确保它在 Physic 命名空间下）
+// 假设 SimplePhysicsBody 在全局命名空间或 Physic 命名空间下，这里直接引用
 
 namespace World
 {
     /// <summary>
     /// DeathWall：当玩家与“挂在同一 GameObject 上的 Tilemap（deathwall）”的 AABB 区域重叠时
-    /// 先把手电量清零（如果有 Flashlight），再调用 Player.Die()（延迟/禁用方式或直接销毁都可）。
+    /// 先把手电量清零（如果有 Flashlight），再调用 Player.Die()。
     ///
-    /// 使用方法：将此脚本挂到“deathwall”这个 Tilemap GameObject 上即可。
+    /// 本脚本挂在“deathwall”这个带 Tilemap 组件的 GameObject 上即可。
     /// </summary>
     [RequireComponent(typeof(Tilemap))]
     public class DeathWall : MonoBehaviour
@@ -29,24 +29,24 @@ namespace World
             Tilemap tm = GetComponent<Tilemap>();
             if (tm == null)
             {
-                Debug.LogError("[DeathWall]：在 Awake 中找不到 Tilemap 组件，请确认挂载在带 Tilemap 的 GameObject 上。");
+                Debug.LogError("[DeathWall][Awake]：找不到 Tilemap 组件，请确认挂载在带 Tilemap 的 GameObject 上。");
                 return;
             }
-            tm.CompressBounds();          // ← 加这一句
+            Debug.Log("[DeathWall][Awake]：成功获取 Tilemap 组件。");
 
-            // 2) 读取 Tilemap 的本地 Bounds（localBounds），然后把它转为世界坐标下的 AABB
-            // localBounds.center 是 Tilemap 本地坐标下的中心（以格子为单位）
-            // localBounds.size   是 Tilemap 本地坐标下的宽度/高度（以格子为单位）
+            // 2) 计算 Tilemap 本地 Bounds 并转换到世界坐标
+            tm.CompressBounds();
             Bounds localBounds = tm.localBounds;
+            Debug.Log($"[DeathWall][Awake] localBounds.center = {localBounds.center}, localBounds.size = {localBounds.size}");
 
             // 把本地中心转换到世界坐标
             Vector3 worldCenter3 = tm.transform.TransformPoint(localBounds.center);
-            // 把本地大小（size）按 lossyScale 转换到世界大小
-            Vector3 worldSize3   = Vector3.Scale(localBounds.size, tm.transform.lossyScale);
+            // 把 localBounds.size 按 lossyScale 转换到世界大小
+            Vector3 worldSize3 = Vector3.Scale(localBounds.size, tm.transform.lossyScale);
 
-            // 只取 X/Y 分量
             wallCenter   = new Vector2(worldCenter3.x, worldCenter3.y);
             wallHalfSize = new Vector2(worldSize3.x * 0.5f, worldSize3.y * 0.5f);
+            Debug.Log($"[DeathWall][Awake] worldCenter = {wallCenter}, worldSize = {worldSize3}, wallHalfSize = {wallHalfSize}");
         }
 
         void Start()
@@ -55,21 +55,31 @@ namespace World
             playerRef = FindObjectOfType<Player.Player>();
             if (playerRef == null)
             {
-                Debug.LogError("[DeathWall]：Start 中找不到 Player.Player，请确认场景中有一个挂了 Player 脚本的对象。");
+                Debug.LogError("[DeathWall][Start]：找不到 Player.Player，请确认场景中已有挂 Player 脚本的对象。");
                 return;
             }
+            Debug.Log($"[DeathWall][Start]：成功获取玩家引用 playerRef = {playerRef.name}");
 
+            // 获取 SimplePhysicsBody 组件
             playerBody = playerRef.GetComponent<SimplePhysicsBody>();
             if (playerBody == null)
             {
-                Debug.LogError("[DeathWall]：Start 中在 Player 上找不到 SimplePhysicsBody 组件，请确认已挂好。");
+                Debug.LogError("[DeathWall][Start]：在 Player 上找不到 SimplePhysicsBody 组件，请确认已挂好。");
+            }
+            else
+            {
+                Debug.Log($"[DeathWall][Start]：playerBody.halfSize = {playerBody.halfSize}");
             }
 
+            // 获取 Flashlight 组件（可能没有）
             playerFlash = playerRef.GetComponent<Flashlight>();
             if (playerFlash == null)
             {
-                // 没有 Flashlight 也行，只是没法预先清零电量
-                Debug.LogWarning("[DeathWall]：Player 身上没有 Flashlight 组件，会直接调用 Die() 而不先 DrainAll()。");
+                Debug.LogWarning("[DeathWall][Start]：Player 身上没有 Flashlight 组件，触发时会直接调用 Die()。");
+            }
+            else
+            {
+                Debug.Log($"[DeathWall][Start]：playerFlash.CurrentCharge = {playerFlash.CurrentCharge}");
             }
         }
 
@@ -83,22 +93,43 @@ namespace World
             Vector2 pCenter = playerRef.transform.position;
             Vector2 pHalf   = playerBody.halfSize;
 
-            // 4) 判断是否与 Tilemap AABB 重叠
-            if (IsAABBIntersect(pCenter, pHalf, wallCenter, wallHalfSize))
-            {
-                // 5) 如果挂了 Flashlight，先把电量清零
-                if (playerFlash != null)
-                    playerFlash.DrainAll();
+            // 4) 在每帧输出玩家 AABB 与 DeathWall AABB 信息，便于调试
+            Debug.Log($"[DeathWall][Update] pCenter = {pCenter}, pHalf = {pHalf}; " +
+                      $"wallCenter = {wallCenter}, wallHalfSize = {wallHalfSize}");
 
-                // 6) 调用新的 Die()（该方法中会做“禁用+延迟销毁”处理）
-                playerRef.Die();
+            // 5) 判断是否与 Tilemap AABB 重叠
+            bool overlapX = Mathf.Abs(pCenter.x - wallCenter.x) <= (pHalf.x + wallHalfSize.x);
+            bool overlapY = Mathf.Abs(pCenter.y - wallCenter.y) <= (pHalf.y + wallHalfSize.y);
+            bool isIntersect = overlapX && overlapY;
+
+            Debug.Log($"[DeathWall][Update] overlapX = {overlapX}, overlapY = {overlapY}, isIntersect = {isIntersect}");
+
+            if (isIntersect)
+            {
+                Debug.Log("[DeathWall][Update] 玩家与 DeathWall AABB 相交 → 触发死亡逻辑");
+
+                // 6) 如果挂了 Flashlight，先把电量清零
+                if (playerFlash != null)
+                {
+                    playerRef.Die();
+                    Debug.Log("[DeathWall][Update] 调用 Flashlight.DrainAll()");
+                    playerFlash.DrainAll();
+                }
+                else
+                {
+                    Debug.Log("[DeathWall][Update] 没有 Flashlight 组件，直接调用 Die()");
+                }
+
+                // // 7) 调用玩家的 Die() 方法
+                // playerRef.Die();
+                // Debug.Log("[DeathWall][Update] 调用了 playerRef.Die()，玩家应当死亡");
 
                 hasKilled = true;  // 只触发一次
             }
         }
 
         /// <summary>
-        /// 通用 AABB 相交检测：
+        /// 通用 AABB 相交检测（此方法已被内联到 Update，用 Debug 输出更直观，保留供复用）：
         /// centerA/halfA：玩家的中心 + 半尺寸
         /// centerB/halfB：死亡墙 Tilemap 的中心 + 半尺寸
         /// </summary>
@@ -122,12 +153,12 @@ namespace World
                 half   = new Vector2(1f, 1f);
             }
 
-            Vector3 c3 = new Vector3(center.x, center.y, 0f);
-            Vector3 size3 = new Vector3(half.x * 2, half.y * 2, 0f);
+            Vector3 c3   = new Vector3(center.x, center.y, 0f);
+            Vector3 size = new Vector3(half.x * 2, half.y * 2, 0f);
             Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
-            Gizmos.DrawCube(c3, size3);
+            Gizmos.DrawCube(c3, size);
             Gizmos.color = Color.red;
-            Gizmos.DrawWireCube(c3, size3);
+            Gizmos.DrawWireCube(c3, size);
         }
 #endif
     }

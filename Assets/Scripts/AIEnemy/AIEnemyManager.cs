@@ -1,6 +1,7 @@
 // Assets/Scripts/AIEnemy/AIEnemyManager.cs
 using UnityEngine;
 using AIEnemy;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(SimplePhysicsBody))]
@@ -35,7 +36,9 @@ public class AIEnemyManager : MonoBehaviour
 
     /* ===== Private ===== */
     private IEnemyStrategy _current;
-    private StrategyFactory _factory => StrategyFactory.Instance;
+    // private StrategyFactory _factory => StrategyFactory.Instance;
+    private StrategyFactory _factory = new StrategyFactory(); // 每个敌人自己的工厂
+    private Dictionary<EnemyState, IEnemyStrategy> _strategyCache; // 缓存策略实例
 
     private SpriteRenderer _sr;
     private Animator _anim;
@@ -60,6 +63,8 @@ public class AIEnemyManager : MonoBehaviour
 
         PlayerTf = FindObjectOfType<Player.Player>()?.transform;
 
+        // 初始化策略缓存
+        _strategyCache = new Dictionary<EnemyState, IEnemyStrategy>();
         SwitchState(EnemyState.Patrol);
     }
 
@@ -147,10 +152,36 @@ public class AIEnemyManager : MonoBehaviour
     }
 
     /* ================= Internals ================= */
+    // private void SwitchState(EnemyState to)
+    // {
+    //     State = to;
+    //     _current = _factory.Get(to);
+
+    //     // 同步参数
+    //     if (to == EnemyState.Patrol && _current is PatrolStrategy patrol)
+    //         patrol.Init(transform.position, patrolHalfDistance, patrolSpeed);
+
+    //     if (to == EnemyState.Chase && _current is ChaseStrategy chase)
+    //     {
+    //         chase.speed = chaseSpeed;
+    //         chase.attackRange = attackRange;
+    //     }
+
+    //     // 动画
+    //     if (to == EnemyState.Attack) SetAnimAttack();
+    //     if (to == EnemyState.Dead)   SetAnimDead();
+    // }
+
     private void SwitchState(EnemyState to)
     {
         State = to;
-        _current = _factory.Get(to);
+        
+        // 获取或创建策略实例
+        if (!_strategyCache.TryGetValue(to, out _current))
+        {
+            _current = _factory.Create(to);
+            _strategyCache.Add(to, _current);
+        }
 
         // 同步参数
         if (to == EnemyState.Patrol && _current is PatrolStrategy patrol)
