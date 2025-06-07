@@ -85,19 +85,15 @@ namespace World
 
         void Update()
         {
-            // 如果已经触发一次死亡，就不再重复判断
             if (hasKilled) return;
             if (playerRef == null || playerBody == null) return;
 
-            // 3) 构造玩家 AABB：中心 + 半尺寸
             Vector2 pCenter = playerRef.transform.position;
-            Vector2 pHalf   = playerBody.halfSize;
+            Vector2 pHalf = playerBody.halfSize;
 
-            // 4) 在每帧输出玩家 AABB 与 DeathWall AABB 信息，便于调试
-            Debug.Log($"[DeathWall][Update] pCenter = {pCenter}, pHalf = {pHalf}; " +
-                      $"wallCenter = {wallCenter}, wallHalfSize = {wallHalfSize}");
+            // 调试日志可保留，但实际发布时可移除以减少日志量
+            Debug.Log($"[DeathWall][Update] pCenter = {pCenter}, pHalf = {pHalf}; wallCenter = {wallCenter}, wallHalfSize = {wallHalfSize}");
 
-            // 5) 判断是否与 Tilemap AABB 重叠
             bool overlapX = Mathf.Abs(pCenter.x - wallCenter.x) <= (pHalf.x + wallHalfSize.x);
             bool overlapY = Mathf.Abs(pCenter.y - wallCenter.y) <= (pHalf.y + wallHalfSize.y);
             bool isIntersect = overlapX && overlapY;
@@ -108,23 +104,25 @@ namespace World
             {
                 Debug.Log("[DeathWall][Update] 玩家与 DeathWall AABB 相交 → 触发死亡逻辑");
 
-                // 6) 如果挂了 Flashlight，先把电量清零
+                // ==== 关键修改开始 ====
+                // 1. 无论是否有Flashlight组件，都必须调用Die()
+                // 2. 调整执行顺序：先清空电量再触发死亡
                 if (playerFlash != null)
                 {
-                    playerRef.Die();
                     Debug.Log("[DeathWall][Update] 调用 Flashlight.DrainAll()");
-                    playerFlash.DrainAll();
+                    playerFlash.DrainAll(); // 清空电量
                 }
                 else
                 {
                     Debug.Log("[DeathWall][Update] 没有 Flashlight 组件，直接调用 Die()");
                 }
+                
+                // 确保始终调用死亡方法
+                playerRef.Die();
+                Debug.Log("[DeathWall][Update] 调用了 playerRef.Die()，玩家应当死亡");
+                // ==== 关键修改结束 ====
 
-                // // 7) 调用玩家的 Die() 方法
-                // playerRef.Die();
-                // Debug.Log("[DeathWall][Update] 调用了 playerRef.Die()，玩家应当死亡");
-
-                hasKilled = true;  // 只触发一次
+                hasKilled = true;
             }
         }
 

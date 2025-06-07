@@ -44,9 +44,32 @@ namespace Player
             // 其他输入：Move/Jump/ToggleTorch/Teleport 等
         }
 
+
+        // void Update()
+        // {
+        //     // —— 读左右输入 —— 
+        //     float h = 0;
+        //     if (Input.GetKey(KeyCode.A))      h = -1;
+        //     else if (Input.GetKey(KeyCode.D)) h =  1;
+
+        //     // —— 只在有输入时移动 —— 
+        //     if (Mathf.Abs(h) > 0.01f)
+        //         Move(h);
+
+        //     HandleRechargeProximity();
+        // }
+
+        // public void Move(float dir)
+        // {
+        //     // 只在 dir≠0 时给速度赋值，松手后交给摩擦逻辑慢慢停
+        //     if (Mathf.Abs(dir) > 0.01f)
+        //         body.velocity.x = dir * moveSpeed;
+        // }
+
+
         /* ========== 供 ICommand / AI 调用的接口 ========== */
 
-        /// 水平移动：dir ∈ [-1,1]（左 -1，右 +1，松手 0）
+        // /// 水平移动：dir ∈ [-1,1]（左 -1，右 +1，松手 0）
         public void Move(float dir)
         {
             body.velocity.x = dir * moveSpeed;
@@ -144,6 +167,10 @@ namespace Player
 
         public void Die()
         {
+            if (flashlight != null)
+            {
+                flashlight.DrainAll(); // 直接把电量清零
+            }
             Debug.Log("Player died: out of battery");
             // TODO: 这里可触发 UIManager.GameOver()、播放动画等
             Destroy(gameObject);        // 先用最简单的销毁

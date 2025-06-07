@@ -18,15 +18,50 @@ public class SimplePhysicsBody : MonoBehaviour
 
     void Start()        => PhysicsEngine.I.Register(this);
     void OnDisable()    { if (PhysicsEngine.I) PhysicsEngine.I.Unregister(this); }
+    
+
+
+    [Header("物理材质")]
+    public PhysicsMaterial defaultMaterial;
+    private PhysicsMaterial currentMaterial;
+
+    // 设置当前表面材质
+    public void SetSurfaceMaterial(PhysicsMaterial material)
+    {
+        currentMaterial = material;
+    }
+
+    // 重置为默认材质
+    public void ResetSurfaceMaterial()
+    {
+        currentMaterial = defaultMaterial;
+    }
+
+    // 获取当前摩擦系数
+    private float GetFriction()
+    {
+        return currentMaterial != null ? currentMaterial.friction : 
+            defaultMaterial != null ? defaultMaterial.friction : 0.5f;
+    }
 
     /* -------------------- 主循环：由 PhysicsEngine 调用 -------------------- */
     public void Tick(float dt)
     {
+
+        // 应用摩擦力(新加的)
+            // 应用摩擦力
+        if (grounded && Mathf.Abs(velocity.x) > 0.01f)
+        {
+            float friction = GetFriction();
+            velocity.x = Mathf.Lerp(velocity.x, 0, friction * dt * 10);
+        }
+
+        
         velocity.y += gravity * dt;
         grounded = false;
 
         MoveAxis(ref velocity.x, Vector2.right, dt); // 先水平
-        MoveAxis(ref velocity.y, Vector2.up,    dt); // 再垂直
+        MoveAxis(ref velocity.y, Vector2.up, dt); // 再垂直
     }
 
     /* ------------------------ 下面都是内部工具 ---------------------------- */
@@ -85,6 +120,8 @@ public class SimplePhysicsBody : MonoBehaviour
     {
         velocity.x = dir * speed;
     }
+
+    
 
 
 #if UNITY_EDITOR
