@@ -1,7 +1,10 @@
 // Assets/Scripts/Player/Player.cs
 using UnityEngine;
-using World; 
- // 引入自定义的 SimplePhysicsBody 脚本
+using World;
+using GameCore;  // 引用 GameCore 命名空间，以便访问 GameEvents
+
+
+// 引入自定义的 SimplePhysicsBody 脚本
 namespace Player
 {
     /// 
@@ -172,11 +175,16 @@ namespace Player
                 flashlight.DrainAll(); // 直接把电量清零
             }
             Debug.Log("Player died: out of battery");
-            // TODO: 这里可触发 UIManager.GameOver()、播放动画等
-            Destroy(gameObject);        // 先用最简单的销毁
+
+            // 触发全局死亡事件，交给 GameManager 去处理流程
+            GameEvents.OnPlayerDied?.Invoke();
+
+            // TODO: 这里可以先播死亡动画再销毁
+            Destroy(gameObject);
+
         }
-        
-        
+
+
         public void OnAttacked(float amount)
         {
             if (flashlight != null)

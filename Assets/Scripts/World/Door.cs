@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using GameCore; // 引用 GameCore 命名空间，以便访问 GameEvents
 using Player;   // 引用 Player 命名空间，以便访问 Player.Player
  // 引用你自写的物理引擎命名空间，以便访问 SimplePhysicsBody
 
@@ -149,10 +150,14 @@ namespace World
                 Debug.LogError("[Door]：nextSceneName 为空，无法切换场景。请在 Inspector 中填写正确的场景名，并确保已添加到 Build Settings。");
                 yield break;
             }
-
+            
+            GameEvents.OnDoorOpened?.Invoke(nextSceneName);
+            
             // 日志提示
             Debug.Log($"[Door]：玩家钥匙数量≥{requiredKeys} 且已站在门前，正在加载场景 “{nextSceneName}” …");
-            SceneManager.LoadScene(nextSceneName);
+            // SceneManager.LoadScene(nextSceneName);
+
+            
         }
 
 #if UNITY_EDITOR

@@ -1,4 +1,6 @@
 using UnityEngine;
+using GameCore; // 引用 GameCore 命名空间，以便访问 GameEvents
+
 
 namespace World
 {
@@ -36,6 +38,9 @@ namespace World
         {
             collected = true;
             p.AddKey();
+
+
+            GameEvents.OnKeyCollected?.Invoke();  // 通知关卡逻辑
 
             /* 动效：先隐藏渲染器再销毁 */
             var sr = GetComponent<SpriteRenderer>();
