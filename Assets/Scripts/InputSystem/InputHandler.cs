@@ -28,13 +28,19 @@ public class InputHandler : MonoBehaviour
         // 跳跃
         if (UInput.GetButtonDown("Jump"))
             jumpCmd.Execute();
-            
+
         if (Input.GetKeyDown(KeyCode.L))
             torchCmd.Execute();          // 已有：熄 / 点火把
 
         // 瞬移到最近的燃烧火把（默认 M 键）
         if (UInput.GetKeyDown(KeyCode.M))
             tpCmd.Execute();
+            
+        if (GameCore.GameManager.I.State == GameCore.GameState.Died &&
+        Input.GetKeyDown(KeyCode.R))
+        {
+            GameCore.GameManager.I.RestartLevel();
+        }
 
 
         // 手电（默认 F 键）

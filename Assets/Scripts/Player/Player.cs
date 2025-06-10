@@ -33,7 +33,9 @@ namespace Player
 
         /* ---------- 组件引用 ---------- */
         SimplePhysicsBody body;     // 自己写的刚体脚本
-        // Flashlight torch;           // 如果没挂手电，可为 null
+                                    // Flashlight torch;           // 如果没挂手电，可为 null
+        
+       
 
         void Awake()
         {
@@ -182,7 +184,7 @@ namespace Player
             GameEvents.OnPlayerDied?.Invoke();
 
             // TODO: 这里可以先播死亡动画再销毁
-            Destroy(gameObject);
+            //Destroy(gameObject);
 
         }
         
