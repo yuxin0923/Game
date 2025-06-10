@@ -16,6 +16,39 @@ public class TilemapWorld : MonoBehaviour
     [Tooltip("所有需要参与碰撞的 Tilemap；可拖多张")]
     public List<Tilemap> solidTilemaps = new();
 
+
+
+
+
+
+    /* ---------- TilemapWorld.cs 追加 ---------- */
+    [System.Serializable]                      // Inspector 里可展开的结构体
+    public struct SurfaceLayer
+    {
+        public Tilemap tilemap;               // 这一层的瓦片
+        public PhysicsMaterial material;      // 对应的物理材质
+    }
+
+    [Tooltip("不同摩擦材质的 Tilemap 列表")]
+    public List<SurfaceLayer> surfaceLayers = new();
+
+    /// <summary>返回 worldPos 所在瓦片的 PhysicsMaterial；找不到则返回 null</summary>
+    public PhysicsMaterial GetMaterial(Vector2 worldPos)
+    {
+        foreach (var layer in surfaceLayers)
+        {
+            if (layer.tilemap == null || layer.material == null) continue;
+            Vector3Int cell = layer.tilemap.WorldToCell(worldPos);
+            if (layer.tilemap.HasTile(cell))
+                return layer.material;
+        }
+        return null;                          // 没特殊材质就走默认
+    }
+
+
+
+    
+
     /* -------- 生命周期 -------- */
     void Awake()
     {

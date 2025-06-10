@@ -4,7 +4,7 @@ using World;
 using GameCore;  // 引用 GameCore 命名空间，以便访问 GameEvents
 
 
-// 引入自定义的 SimplePhysicsBody 脚本
+ // 引入自定义的 SimplePhysicsBody 脚本
 namespace Player
 {
     /// 
@@ -73,10 +73,12 @@ namespace Player
         /* ========== 供 ICommand / AI 调用的接口 ========== */
 
         // /// 水平移动：dir ∈ [-1,1]（左 -1，右 +1，松手 0）
+// 改写 Move() —— 不再直接修改 velocity
         public void Move(float dir)
         {
-            body.velocity.x = dir * moveSpeed;
+            body.SetMoveInput(dir, moveSpeed);
         }
+
 
         /// 跳跃：只有落地时才生效
         public void Jump()
@@ -183,8 +185,8 @@ namespace Player
             Destroy(gameObject);
 
         }
-
-
+        
+        
         public void OnAttacked(float amount)
         {
             if (flashlight != null)

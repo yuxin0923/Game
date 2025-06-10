@@ -386,7 +386,8 @@ MonoBehaviour:
   gravity: -50
   velocity: {x: 0, y: 0}
   grounded: 0
-  defaultMaterial: {fileID: 11400000, guid: e80d9caa8a25d3c44887d537e8489801, type: 2}
+  defaultMaterial: {fileID: 11400000, guid: 4df67993526905e47b50a8680a32794f, type: 2}
+  baseGroundAccel: 200
 --- !u!114 &278502024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -399,7 +400,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdc61285b915e2040a888fcf32ef57ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 8
+  moveSpeed: 3
   jumpSpeed: 15
   flashlight: {fileID: 278502025}
   rechargeRange: 1.2
@@ -501,6 +502,9 @@ MonoBehaviour:
   solidTilemaps:
   - {fileID: 441534747}
   - {fileID: 628814301}
+  surfaceLayers:
+  - tilemap: {fileID: 441534747}
+    material: {fileID: 11400000, guid: e80d9caa8a25d3c44887d537e8489801, type: 2}
 --- !u!1 &441534744
 GameObject:
   m_ObjectHideFlags: 0
