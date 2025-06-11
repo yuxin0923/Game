@@ -97,19 +97,69 @@ public class SimplePhysicsBody : MonoBehaviour
             float step = Mathf.Min(STEP, rest);
             Vector2 next = (Vector2)transform.position + axis * step * dir;
 
-            if (HitTile(next))
+            // —— 这里同时检测瓦片 和 平台 —— 
+            if (HitTile(next) || HitPlatform(next))
             {
-                while (HitTile(next)) next -= axis * 0.001f * dir;
+                // 回退到刚好不碰撞的位置
+                while (HitTile(next) || HitPlatform(next))
+                    next -= axis * 0.001f * dir;
                 transform.position = next;
+
+                // 撞墙或者落地都要把速度归零
                 vAxis = 0f;
-                if (axis == Vector2.up && dir < 0) grounded = true;
+                // 如果是垂直向下，标记着地
+                if (axis == Vector2.up && dir < 0)
+                    grounded = true;
                 return;
             }
 
+            // 没撞到，就更新位置，继续下一小步
             transform.position = next;
             rest -= step;
         }
     }
+
+    /// <summary>
+    /// 检查 next 位置的 AABB（center=next, halfSize=this.halfSize）
+    /// 会不会和任何一个 MovingPlatform 重叠
+    /// </summary>
+    bool HitPlatform(Vector2 pos)
+    {
+        foreach (var p in PhysicsEngine.I.Platforms)
+        {
+            // 平台的实际中心 = transform.position + centerOffset
+            Vector2 center = (Vector2)p.transform.position + p.centerOffset;
+            Vector2 half   = p.halfSize;
+            if (CollisionDetector.AABBOverlap(pos, halfSize, center, half))
+                return true;
+        }
+        return false;
+    }
+
+    // void MoveAxis(ref float vAxis, Vector2 axis, float dt)
+    // {
+    //     float move = vAxis * dt;
+    //     float dir  = Mathf.Sign(move);
+    //     float rest = Mathf.Abs(move);
+
+    //     while (rest > 0f)
+    //     {
+    //         float step = Mathf.Min(STEP, rest);
+    //         Vector2 next = (Vector2)transform.position + axis * step * dir;
+
+    //         if (HitTile(next))
+    //         {
+    //             while (HitTile(next)) next -= axis * 0.001f * dir;
+    //             transform.position = next;
+    //             vAxis = 0f;
+    //             if (axis == Vector2.up && dir < 0) grounded = true;
+    //             return;
+    //         }
+
+    //         transform.position = next;
+    //         rest -= step;
+    //     }
+    // }
 
     bool HitTile(Vector2 pos)
     {
