@@ -14,5 +14,8 @@ namespace GameCore
         // public static Action OnDoorOpened;
 
         public static Action<string> OnDoorOpened;   // <— 带 string
+
+        /* ☆ 新增：主菜单点 Instruction 时触发，没有参数 */
+        public static Action OnInstructionRequested;     // ← 就这一行
     }
 }

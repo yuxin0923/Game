@@ -39,6 +39,7 @@ namespace GameCore
             // 订阅世界事件
             GameEvents.OnDoorOpened += OnDoorOpened;
             GameEvents.OnPlayerDied += OnPlayerDied;
+            GameEvents.OnInstructionRequested += OnInstructionRequested;
 
             // 监听场景加载完
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -48,6 +49,7 @@ namespace GameCore
         {
             GameEvents.OnDoorOpened -= OnDoorOpened;
             GameEvents.OnPlayerDied -= OnPlayerDied;
+            GameEvents.OnInstructionRequested -= OnInstructionRequested;
         }
 
         /// <summary>
@@ -167,6 +169,14 @@ namespace GameCore
                     UIManager.I.ShowGameOver();
                     break;
             }
+        }
+
+
+        /* ☆ 事件响应 */
+        private void OnInstructionRequested()
+        {
+            // 你可以直接 Load，也可以先 ChangeState(GameState.Menu) 再 Load
+            SceneLoader.Load("Instruction");   // 复用封装，未来改异步只动 SceneLoader
         }
         
 
