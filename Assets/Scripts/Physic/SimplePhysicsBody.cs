@@ -136,31 +136,6 @@ public class SimplePhysicsBody : MonoBehaviour
         return false;
     }
 
-    // void MoveAxis(ref float vAxis, Vector2 axis, float dt)
-    // {
-    //     float move = vAxis * dt;
-    //     float dir  = Mathf.Sign(move);
-    //     float rest = Mathf.Abs(move);
-
-    //     while (rest > 0f)
-    //     {
-    //         float step = Mathf.Min(STEP, rest);
-    //         Vector2 next = (Vector2)transform.position + axis * step * dir;
-
-    //         if (HitTile(next))
-    //         {
-    //             while (HitTile(next)) next -= axis * 0.001f * dir;
-    //             transform.position = next;
-    //             vAxis = 0f;
-    //             if (axis == Vector2.up && dir < 0) grounded = true;
-    //             return;
-    //         }
-
-    //         transform.position = next;
-    //         rest -= step;
-    //     }
-    // }
-
     bool HitTile(Vector2 pos)
     {
         Vector2 min = pos - halfSize;
