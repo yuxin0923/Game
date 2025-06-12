@@ -480,8 +480,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pages:
-  - {fileID: 21300000, guid: ced5fa0ab1a3dff458f33f8572cefc30, type: 3}
-  - {fileID: 21300000, guid: 34f9dd4d700e50e44a358cc0ae21f53c, type: 3}
+  - {fileID: 21300000, guid: f76b73f804a4d5845b81a1861c18221a, type: 3}
+  - {fileID: 21300000, guid: 5e82bbf925fa60240b5b1725a582a57d, type: 3}
+  - {fileID: 21300000, guid: bbf9f3fc90a530340a0e417cf0e8947a, type: 3}
   pageImage: {fileID: 800929427}
   btnPrev: {fileID: 1796008306}
   btnNext: {fileID: 1518717363}
@@ -543,8 +544,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1172, y: 659}
+  m_AnchoredPosition: {x: 0.000078201, y: 0.00023079}
+  m_SizeDelta: {x: 800, y: 450.05}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &800929427
 MonoBehaviour:
@@ -559,7 +560,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.8018868, g: 0.8018868, b: 0.8018868, a: 0.8235294}
+  m_Color: {r: 0.9669811, g: 0.96241987, b: 0.96241987, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

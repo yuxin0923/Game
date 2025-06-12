@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8b0af3fc1d23f1418ea40f3edd37e10, type: 3}
   m_Name: PM_Normal
   m_EditorClassIdentifier: 
-  friction: 0.82
+  friction: 0.588
   surfaceType: 0

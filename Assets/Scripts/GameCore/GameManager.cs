@@ -11,6 +11,7 @@ namespace GameCore
         LevelSelect,
         Playing,
         Died, 
+        Paused,
         GameOver
     }
 
@@ -23,6 +24,7 @@ namespace GameCore
         private string nextSceneName;
         // 切场景之后再切 UI
         private bool changingState;
+        private bool isPaused = false; 
         private void SetPaused(bool paused) => Time.timeScale = paused ? 0f : 1f;
 
         private void Awake()
@@ -60,17 +62,43 @@ namespace GameCore
             nextSceneName = sceneName;
             ChangeState(GameState.Playing);
         }
+                /*──────── Pause / Resume ────────*/
+        public void Pause()
+        {
+            if (State != GameState.Playing || isPaused) return;
+
+            isPaused = true;
+            SetPaused(true);
+            UIManager.I.ShowPause();
+        }
+
+        public void Resume()
+        {
+            if (!isPaused) return;
+
+            isPaused = false;
+            SetPaused(false);
+            UIManager.I.ShowHUD();
+        }
 
 
 
         private void OnDoorOpened(string nextScene)
         {
+
+            if (nextScene == "GameEnd")
+            {
+                ChangeState(GameState.GameOver); // 会在下面 case 里 LoadScene("GameEnd")
+                return;
+            }
             // 解锁下一个关卡
             var cur = SceneManager.GetActiveScene().name;
             if (cur.StartsWith("Level") && int.TryParse(cur.Substring(5), out int n))
             {
                 PlayerPrefs.SetInt("Level" + (n + 1), 1);
             }
+
+
 
             // 直接开始下一关
             StartLevel(nextScene);   // ← 复用你已有的启动关卡方法
@@ -111,8 +139,7 @@ namespace GameCore
                     break;
 
                 case GameState.GameOver:
-                    SceneManager.LoadScene("GameOver");
-                    // 移除 UIManager.I.ShowGameOver();
+                    SceneManager.LoadScene("GameEnd");       // ← 修改
                     break;
 
                 case GameState.Died:

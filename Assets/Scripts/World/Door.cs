@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using GameCore; // 引用 GameCore 命名空间，以便访问 GameEvents
 using Player;   // 引用 Player 命名空间，以便访问 Player.Player
- // 引用你自写的物理引擎命名空间，以便访问 SimplePhysicsBody
+                // 引用你自写的物理引擎命名空间，以便访问 SimplePhysicsBody;
+using TMPro;    // 引用 TextMeshPro 命名空间，以便显示钥匙数量 
 
 namespace World
 {
@@ -44,6 +45,12 @@ namespace World
         [Tooltip("播放开门动画后等待多少秒再 LoadScene，保证动画播放完毕")]
         public float openToLoadDelay = 1.0f;
 
+
+
+
+        [Header("UI 显示——拖拽下面的 KeyText")]
+        [SerializeField] TMP_Text keyText;
+
         // —— 私有字段 —— 
         private Player.Player playerRef;          // 场景中挂有 Player.Player 的玩家引用
         private SimplePhysicsBody playerBody;     // 玩家身上的 SimplePhysicsBody，以便获取 halfSize
@@ -80,7 +87,29 @@ namespace World
             {
                 Debug.LogWarning("[Door]：未指定 Animator，开门时不会播放动画，只会直接延时切换场景。");
             }
+
+            // 初始化一次文字
+            UpdateKeyDisplay();
+            // 订阅：只要玩家每收集到一把钥匙，就刷新显示
+            GameEvents.OnKeyCollected += UpdateKeyDisplay;
         }
+
+
+        void OnDestroy()
+        {
+            GameEvents.OnKeyCollected -= UpdateKeyDisplay;
+        }
+
+        // 每次钥匙收集后，玩家的 keyCount 会 +1 → 这里拿最新的值来刷新
+        void UpdateKeyDisplay()
+        {
+            if (keyText != null)
+            {
+                // 在这里拼字符串，前面加上 "keys: "
+                keyText.text = $"keys: {playerRef.keyCount}/{requiredKeys}";
+            }
+        }
+
 
         void Update()
         {
@@ -150,14 +179,14 @@ namespace World
                 Debug.LogError("[Door]：nextSceneName 为空，无法切换场景。请在 Inspector 中填写正确的场景名，并确保已添加到 Build Settings。");
                 yield break;
             }
-            
+
             GameEvents.OnDoorOpened?.Invoke(nextSceneName);
-            
+
             // 日志提示
             Debug.Log($"[Door]：玩家钥匙数量≥{requiredKeys} 且已站在门前，正在加载场景 “{nextSceneName}” …");
             // SceneManager.LoadScene(nextSceneName);
 
-            
+
         }
 
 #if UNITY_EDITOR

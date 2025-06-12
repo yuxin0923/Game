@@ -36,11 +36,11 @@ public class InputHandler : MonoBehaviour
         if (UInput.GetKeyDown(KeyCode.M))
             tpCmd.Execute();
             
-        if (GameCore.GameManager.I.State == GameCore.GameState.Died &&
-        Input.GetKeyDown(KeyCode.R))
-        {
-            GameCore.GameManager.I.RestartLevel();
-        }
+        // if (GameCore.GameManager.I.State == GameCore.GameState.Died &&
+        // Input.GetKeyDown(KeyCode.R))
+        // {
+        //     GameCore.GameManager.I.RestartLevel();
+        // }
 
 
         // 手电（默认 F 键）
