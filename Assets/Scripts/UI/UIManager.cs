@@ -132,6 +132,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using GameCore;                        // 用于访问 GameManager
+using TMPro; //引入这个命名空间
+
+
+
 
 namespace UI
 {
@@ -169,7 +173,8 @@ namespace UI
         public Button winQuitButton;
 
         /*──────── 其它 UI（可选） ────────*/
-        public Text keyCounterText;
+        // 将原来的Text改为TMP_Text
+        public TMP_Text keyCounterText;
 
         /*──────────────────────────────*/
         private void Awake()
@@ -193,8 +198,7 @@ namespace UI
             /* Instruction */
             instructionButton?.onClick.AddListener(() => GameEvents.OnInstructionRequested?.Invoke());
 
-            /* Pause 打开按钮 */
-            pauseButton?.onClick.AddListener(() => GameManager.I.Pause());
+
         }
 
         /*──────── Canvas 切换 API ────────*/
@@ -221,6 +225,8 @@ namespace UI
         {
             if (keyCounterText) keyCounterText.text = count.ToString();
         }
+
+
     }
 }
 

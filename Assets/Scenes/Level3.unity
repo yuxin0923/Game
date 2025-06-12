@@ -122,63 +122,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &36699502
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 5378765239361663792, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_Name
-      value: AIEnemy (2)
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -2.33
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.16
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0.06684915
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7686755348892912602, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: fd9b4405bb8e0724a866d829bf3056bf, type: 3}
 --- !u!1001 &61026221
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -187,6 +130,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1508093890230364947, guid: e786d58f51409614880fa1a8c6c87a45, type: 3}
+      propertyPath: m_text
+      value: '       You  are trapped in darkness...
+
+        Click R button to restart
+        current level'
+      objectReference: {fileID: 0}
     - target: {fileID: 2121029983885329700, guid: e786d58f51409614880fa1a8c6c87a45, type: 3}
       propertyPath: m_Name
       value: DeathCanvas
@@ -276,6 +226,28 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e786d58f51409614880fa1a8c6c87a45, type: 3}
+--- !u!114 &61026222 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5433746898336088117, guid: e786d58f51409614880fa1a8c6c87a45, type: 3}
+  m_PrefabInstance: {fileID: 61026221}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &61026223 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1531060887243257715, guid: e786d58f51409614880fa1a8c6c87a45, type: 3}
+  m_PrefabInstance: {fileID: 61026221}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &86080782
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -406,6 +378,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
+      propertyPath: m_Intensity
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 8034870855998728686, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Name
       value: Torch (1)
@@ -6834,6 +6810,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
+      propertyPath: m_Intensity
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 8034870855998728686, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Name
       value: Torch (3)
@@ -6900,9 +6880,17 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 217450468841606004, guid: a92c2247badb9164faf2e31588185c6e, type: 3}
+      propertyPath: menuButton
+      value: 
+      objectReference: {fileID: 61026223}
+    - target: {fileID: 217450468841606004, guid: a92c2247badb9164faf2e31588185c6e, type: 3}
       propertyPath: deathCanvas
       value: 
       objectReference: {fileID: 1026161660}
+    - target: {fileID: 217450468841606004, guid: a92c2247badb9164faf2e31588185c6e, type: 3}
+      propertyPath: restartButton
+      value: 
+      objectReference: {fileID: 61026222}
     - target: {fileID: 580072749268009546, guid: a92c2247badb9164faf2e31588185c6e, type: 3}
       propertyPath: m_Name
       value: UIManager
@@ -7022,15 +7010,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Color.b
-      value: 0.044588834
+      value: 0.24207903
       objectReference: {fileID: 0}
     - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Color.g
-      value: 0.2739531
+      value: 0.5277068
       objectReference: {fileID: 0}
     - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Color.r
-      value: 0.7877358
+      value: 0.8018868
+      objectReference: {fileID: 0}
+    - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
+      propertyPath: m_Intensity
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 7371327167617012678, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: isOn
@@ -7797,6 +7789,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
+      propertyPath: m_Intensity
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 7371327167617012678, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: isOn
       value: 0
@@ -8106,7 +8102,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_Intensity
-      value: 0
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 3373155996617022525, guid: 6fb0148f532c18149bd4b456136481c2, type: 3}
       propertyPath: m_PointLightInnerRadius
@@ -8508,7 +8504,6 @@ SceneRoots:
   - {fileID: 86080782}
   - {fileID: 147496416}
   - {fileID: 1364767480}
-  - {fileID: 36699502}
   - {fileID: 61026221}
   - {fileID: 839475681}
   - {fileID: 1755554807}

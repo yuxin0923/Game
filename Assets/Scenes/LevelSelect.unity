@@ -211,8 +211,6 @@ MonoBehaviour:
     button: {fileID: 357876892}
   - sceneName: Level3
     button: {fileID: 956387705}
-  - sceneName: Level4
-    button: {fileID: 0}
   firstUnlocked: 1
 --- !u!4 &225217687
 Transform:

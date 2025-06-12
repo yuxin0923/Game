@@ -158,8 +158,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -22, y: -165}
-  m_SizeDelta: {x: 239.8862, y: 52.4428}
+  m_AnchoredPosition: {x: -0.000020981, y: -212}
+  m_SizeDelta: {x: 552.5813, y: 70.2545}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &357876892
 MonoBehaviour:
@@ -382,14 +382,14 @@ RectTransform:
   m_GameObject: {fileID: 803919106}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.0479622, y: 1.12428, z: 1.1104}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1063006185}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -122, y: 106}
+  m_AnchoredPosition: {x: -130, y: 209}
   m_SizeDelta: {x: 615.4949, y: 67.403}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &803919108
@@ -439,8 +439,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 80
-  m_fontSizeBase: 80
+  m_fontSize: 120
+  m_fontSizeBase: 120
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -475,7 +475,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: -261.89368, w: 0}
+  m_margin: {x: 0, y: 0, z: -261.89368, w: -118.087074}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -569,7 +569,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_TargetDisplay: 0
 --- !u!224 &1013217541
 RectTransform:
@@ -618,7 +618,7 @@ RectTransform:
   m_GameObject: {fileID: 1063006184}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.137, y: 1.137, z: 1.137}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 357876891}
@@ -896,7 +896,7 @@ MonoBehaviour:
   levelSelect: {fileID: 0}
   hud: {fileID: 0}
   pauseMenu: {fileID: 0}
-  gameOver: {fileID: 0}
+  gameOver: {fileID: 1013217540}
   deathCanvas: {fileID: 0}
   playButton: {fileID: 0}
   quitButton: {fileID: 357876892}
@@ -905,9 +905,9 @@ MonoBehaviour:
   restartButton: {fileID: 0}
   pauseButton: {fileID: 0}
   instructionButton: {fileID: 2040214806}
-  winMenuButton: {fileID: 0}
-  winQuitButton: {fileID: 0}
-  keyCounterText: {fileID: 0}
+  winMenuButton: {fileID: 2040214806}
+  winQuitButton: {fileID: 357876892}
+  keyCounterText: {fileID: 803919108}
 --- !u!4 &1640055873
 Transform:
   m_ObjectHideFlags: 0
@@ -1103,11 +1103,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 239.8862
+      value: 552.5813
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 65.2181
+      value: 70.2545
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1139,11 +1139,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -22
+      value: -0.000015259
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -59
+      value: -76.81174
       objectReference: {fileID: 0}
     - target: {fileID: 5260791960085082853, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1159,7 +1159,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8287473664174580994, guid: cc15937086cef1549a794c7b10c866ce, type: 3}
       propertyPath: m_Name
-      value: Instruction
+      value: Back
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
