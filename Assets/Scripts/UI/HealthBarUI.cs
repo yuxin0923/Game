@@ -3,22 +3,22 @@ using UnityEngine.UI;
 
 public class HealthBar : MonoBehaviour
 {
-    public Image healthBarFill; // 血条填充组件
-    public Flashlight flashlight; // 玩家手电筒组件
+    public Image healthBarFill; // bloodstain filler component
+    public Flashlight flashlight; // flashlight component
 
-    // 控制血条变化的速度，数值越高，变化越快
+    // Control the speed of health bar changes, the higher the value, the faster the change
     public float fillSpeed = 5f;
 
     private void Update()
     {
         if (flashlight != null)
         {
-            // 获取当前的电量百分比
+            // Get the current charge percentage
             //float targetFill = flashlight.GetCurrentCharge() / flashlight.maxCharge;
-            float targetFill = flashlight.ChargePercent;   // 已经 0~1
+            float targetFill = flashlight.ChargePercent;   // Already 0~1
 
 
-            // 使用 Lerp 函数来平滑变化血条
+            // Use Lerp function to smooth the health bar changes
             healthBarFill.fillAmount = Mathf.Lerp(healthBarFill.fillAmount, targetFill, fillSpeed * Time.deltaTime);
         }
     }

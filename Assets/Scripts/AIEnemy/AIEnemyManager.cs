@@ -1,4 +1,94 @@
 // Assets/Scripts/AIEnemy/AIEnemyManager.cs
+/*
+========================================================================================================================
+AIEnemyManager.cs — Behaviour Orchestrator for 2‑D Enemies
+========================================================================================================================
+Author: XinYu
+Unity Version: 2021‑LTS +
+
+OVERVIEW
+--------
+AIEnemyManager is the single, high‑level “brain” component attached to every enemy prefab. Its job is **not** to implement the
+behaviour logic itself (walk, chase, attack…) but to *orchestrate* those behaviours, acting as a lightweight finite‑state
+machine (FSM) that decides *when* the enemy should patrol, chase, or attack, and then delegates *how* to do it to a
+pluggable **strategy** object.  Think of it as the Context in the **Strategy Pattern**:
+
+    AIEnemyManager (Context)  →  IEnemyStrategy (Strategy interface)
+                                   ↑          ↑           ↑
+                                   │          │           └── AttackStrategy
+                                   │          └── ChaseStrategy
+                                   └── PatrolStrategy
+
+Creation of those concrete strategies is centralised inside **StrategyFactory** (a minimal **Factory Method** helper), and each
+instance is cached in the private dictionary `_strategyCache` so that allocating a behaviour the second time costs zero GC.
+
+The manager also talks to several *Unity* components sitting on the same GameObject:
+
+    • SpriteRenderer & Animator  – cosmetic changes: flipping sprites, blending animations.
+    • SimplePhysicsBody          – a custom Kinematic Rigidbody wrapper that actually moves the enemy.
+    • Gizmos (editor‑only)       – visualises FOV & perception radius for fast tuning.
+
+In play‑time it needs a reference to the **Player** `Transform` (found automatically in Awake) and a static helper
+`LineOfSight.Clear` that performs a tile‑by‑tile raycast.
+
+
+-----------------------------------------------------------------------------------------------------------
+PUBLIC API (the parts other scripts may touch)
+-----------------------------------------------------------------------------------------------------------
+    EnemyState   State            – current high‑level state (readonly)
+    Transform    PlayerTf         – lazy auto‑found reference to the player (can be overridden)
+    bool         PlayerInSight    – last LOS result (useful for UI‑debug or alarms)
+    int          Facing           – graphic facing direction (+1=right, ‑1=left)
+
+    void         SetFacing(int)   – force a new facing; automatically mirrors the sprite
+    void         SetAnimMove(...) – helper invoked by strategies so they don’t need to poke Animator directly
+    void         SetAnimAttack()  – triggers -> "Attack" in the Animator state‑machine
+    void         SetAnimDead()    – triggers -> "Dead", used by DeathStrategy (not shown here)
+    void         SetAnimCatchPlayer() – optional cinematic when catching the player
+
+Nothing else should be called from the outside; all AI decisions live here.
+
+-----------------------------------------------------------------------------------------------------------
+HOW DOES IT TALK TO OTHER SCRIPTS?
+-----------------------------------------------------------------------------------------------------------
+• **Strategies (PatrolStrategy, ChaseStrategy, AttackStrategy …)**
+    The manager passes itself to `Execute(this, deltaTime)` every frame.  Strategies may in turn call
+    SetAnimMove / SetFacing / Body.Move(...) etc. but they *never* modify the FSM.
+
+• **Player.Player** (or any player controller)
+    Only read‑only access: distance calculation and LOS checks.  No coupling beyond `Transform`.
+
+• **LineOfSight** (static helper)
+    Used exclusively inside `DetectPlayer()` to check whether terrain tiles block vision.
+
+• **SimplePhysicsBody**
+    Provides `Move(float vx, float vy)` & physics queries.  Strategies issue movement commands here rather than using
+    `Rigidbody2D` directly to keep the physics layer swappable.
+
+• **Animator**
+    Receives primitive flags & triggers so the artist remains free to change animation graphs without touching code.
+
+Design Patterns Recap
+---------------------
+    1. **Finite‑State Machine (FSM)** – top‑level behavioural flow.
+    2. **Strategy**                  – decouples *what* is done in a state from the manager.
+    3. **Factory Method**            – hides construction logic of concrete strategies.
+    4. (Minor) **Lazy Initialisation** – strategies are created on first use and cached.
+
+USAGE NOTES & EXTENSIBILITY
+---------------------------
+• Add a new behaviour → Derive from `IEnemyStrategy`, implement `Execute`, then extend `EnemyState` enum & `StrategyFactory`.
+• Tweak detection → play with `sightRadius`, `fov`, `groundMask` and `detectInterval` in the Inspector.
+• To support 3‑D → Replace `LineOfSight` and `SimplePhysicsBody` with 3‑D versions; FSM remains intact.
+• Networking → Make `State` authoritative and replicate to clients; strategies run only on the server.
+
+*/
+
+// =========================================================================================================
+// Original Code Starts Here — untouched except for the comment above
+// =========================================================================================================
+
+
 using UnityEngine;
 using AIEnemy;
 using System.Collections.Generic;
@@ -8,15 +98,15 @@ using System.Collections.Generic;
 public class AIEnemyManager : MonoBehaviour
 {
     [Header("=== Environment ===")]
-    public LayerMask groundMask = ~0;   // 默认 Everything，可在 Inspector 调成 Ground
+    public LayerMask groundMask = ~0;   
 
     /* ===== Inspector ===== */
     [Header("=== Detection ===")]
-    [Tooltip("圆形感知半径 (m)")]
+    [Tooltip("Circular Perception Radius(m)")]
     public float sightRadius = 6f;
-    [Tooltip("视野角度(°)，0 表示 360° 无死角")]
+    [Tooltip("Field of view angle (°), 0 means 360° no dead angle")]
     [Range(0, 360)] public float fov = 120f;
-    [Tooltip("探测间隔 (秒)")]
+    [Tooltip("Detection Interval (seconds)")]
     [Min(0.02f)] public float detectInterval = 0.2f;
 
     [Header("=== Patrol ===")]
@@ -33,24 +123,24 @@ public class AIEnemyManager : MonoBehaviour
     public SimplePhysicsBody Body { get; private set; }
 
     public bool PlayerInSight => _playerInSight;
-    // 新增：公共Facing属性
-    public int Facing { get; private set; } = -1;  // +1=面右, -1=面左
+    
+    public int Facing { get; private set; } = -1;  
 
     /* ===== Private ===== */
     private IEnemyStrategy _current;
     // private StrategyFactory _factory => StrategyFactory.Instance;
-    private StrategyFactory _factory = new StrategyFactory(); // 每个敌人自己的工厂
-    private Dictionary<EnemyState, IEnemyStrategy> _strategyCache; // 缓存策略实例
+    private StrategyFactory _factory = new StrategyFactory(); 
+    private Dictionary<EnemyState, IEnemyStrategy> _strategyCache; 
 
     private SpriteRenderer _sr;
     private Animator _anim;
 
     private bool _playerInSight;
     private float _detectTimer;
-    // 新增：跟踪当前朝向，+1=面右, -1=面左
+    
     private int facingDir = -1; 
-    private float _baseScaleX;     // 记录原始 x 缩放
-    private int   _graphicDir;     // 贴图默认朝向：右=+1，左=-1
+    private float _baseScaleX;     
+    private int   _graphicDir;     
 
     /* ================= Unity ================= */
     private void Awake()
@@ -58,14 +148,14 @@ public class AIEnemyManager : MonoBehaviour
         Body = GetComponent<SimplePhysicsBody>();
         _sr = GetComponent<SpriteRenderer>();
         _anim = GetComponent<Animator>();
-        /* === 关键两行 === */
+       
         _baseScaleX = transform.localScale.x;
         _graphicDir = _baseScaleX >= 0 ? +1 : -1;
 
 
         PlayerTf = FindObjectOfType<Player.Player>()?.transform;
 
-        // 初始化策略缓存
+        // Initializing the Policy Cache
         _strategyCache = new Dictionary<EnemyState, IEnemyStrategy>();
         SwitchState(EnemyState.Patrol);
     }
@@ -80,13 +170,13 @@ private void Update()
         _playerInSight = DetectPlayer();
     }
 
-    /* --- FSM --- */
+    /* ----------------------------------- FSM --------------------------------- */
     if (_current == null) return;
     
-    // 计算真实距离（包含垂直分量）
+    // Calculate true distance (including vertical component)
     float dist = PlayerTf ? Vector2.Distance(transform.position, PlayerTf.position) : float.PositiveInfinity;
     
-    // 状态切换逻辑（优先级：Attack > Chase > Patrol）
+    // State switching logic (priority: Attack > Chase > Patrol）
     EnemyState next = State;
     switch (State)
     {
@@ -95,12 +185,12 @@ private void Update()
             break;
             
         case EnemyState.Chase:
-            // 直接进入攻击状态的条件（忽略冷却）
+            // Conditions for direct access to the attack state (ignoring cooldowns)
             if (dist <= attackRange) 
             {
                 next = EnemyState.Attack;
             }
-            // 玩家离开视野或太远
+            // Player out of view or too far away
             else if (!_playerInSight || dist > sightRadius)
             {
                 next = EnemyState.Patrol;
@@ -108,12 +198,12 @@ private void Update()
             break;
             
         case EnemyState.Attack:
-            // 玩家超出攻击范围(带缓冲) → 回Chase
+            // Player is out of attack range (with buffer) → Back to Chase
             if (dist > attackRange * 1.2f) 
             {
                 next = EnemyState.Chase;
             }
-            // 玩家离开视野 → 回Patrol
+            // Player leaves the field of view → Back to Patrol
             else if (!_playerInSight)
             {
                 next = EnemyState.Patrol;
@@ -121,59 +211,18 @@ private void Update()
             break;
     }
     
-    // 立即切换状态
+    // Immediate state switching
     if (next != State)
     {
         SwitchState(next);
     }
-    
-    // 执行当前状态逻辑
+
+    // Execute current state logic
     _current.Execute(this, Time.deltaTime);
 }
 
-    // private void Update()
-    // {
-    //     /* --- Detection --- */
-    //     _detectTimer += Time.deltaTime;
-    //     if (_detectTimer >= detectInterval)
-    //     {
-    //         _detectTimer = 0f;
-    //         _playerInSight = DetectPlayer();
-    //     }
 
-    //     /* --- FSM --- */
-    //     if (_current == null) return;
-    //     if (!_current.Execute(this, Time.deltaTime))
-    //         return;
-
-    //     // 先计算“当前玩家是否仍在可攻击范围内”
-    //     float dist = 0f;
-    //     if (PlayerTf != null)
-    //         dist = Mathf.Abs(PlayerTf.position.x - transform.position.x);
-    //         // 优化状态切换逻辑
-    //     EnemyState next = State switch
-    //     {
-    //         EnemyState.Patrol => _playerInSight ? EnemyState.Chase : EnemyState.Patrol,
-            
-    //         EnemyState.Chase => (_playerInSight && DistToPlayer() <= attackRange) 
-    //             ? EnemyState.Attack 
-    //             : EnemyState.Patrol,
-            
-    //         EnemyState.Attack => (_playerInSight && DistToPlayer() <= attackRange * 1.2f) 
-    //             ? EnemyState.Attack 
-    //             : EnemyState.Chase,
-                
-    //         _ => EnemyState.Dead
-    //     };
-        
-    //     // 立即切换状态（无冷却）
-    //     if (next != State)
-    //     {
-    //         SwitchState(next);
-    //     }
-    // }
-
-    /* ================= Detection Algorithm ================= */
+    /* ================================ Detection Algorithm ========================= */
     private bool DetectPlayer()
     {
         if (!PlayerTf) return false;
@@ -181,15 +230,13 @@ private void Update()
         Vector2 enemyPos = transform.position;
         Vector2 playerPos = PlayerTf.position;
 
-        // 1. 距离圆
+        // 1. Distance from the circle
         if ((playerPos - enemyPos).sqrMagnitude > sightRadius * sightRadius)
             return false;
 
-        // 2. 视野角
+        // 2. Field of view angle
         if (fov > 0f && fov < 360f)
         {
-            //Vector2 forward = Vector2.right * Mathf.Sign(transform.localScale.x);
-            //Vector2 forward = Vector2.left * Mathf.Sign(transform.localScale.x);
             Vector2 forward = Vector2.right * facingDir;
 
             Vector2 dir = (playerPos - enemyPos).normalized;
@@ -198,7 +245,7 @@ private void Update()
                 return false;
         }
 
-        // 3. 瓦片 Raycast (Bresenham)
+        // 3. Tile Raycast (Bresenham)
         return LineOfSight.Clear(enemyPos, playerPos);
     }
 
@@ -207,14 +254,14 @@ private void Update()
     {
         State = to;
         
-        // 获取或创建策略实例
+        // Get or create a policy instance
         if (!_strategyCache.TryGetValue(to, out _current))
         {
             _current = _factory.Create(to);
             _strategyCache.Add(to, _current);
         }
 
-        // 同步参数
+        // Synchronize parameters
         if (to == EnemyState.Patrol && _current is PatrolStrategy patrol)
             patrol.Init(transform.position, patrolHalfDistance, patrolSpeed);
 
@@ -224,45 +271,32 @@ private void Update()
             chase.attackRange = attackRange;
         }
 
-        // 动画
+        // Animation
         if (to == EnemyState.Attack) SetAnimAttack();
         if (to == EnemyState.Dead)   SetAnimDead();
     }
 
     private float DistToPlayer() => PlayerTf ? Vector2.Distance(transform.position, PlayerTf.position) : float.PositiveInfinity;
 
-    /* === Animation helpers === */
-    // 放在类里面原来 SetAnimMove 旁边
-    // 修改 SetFacing：让它只负责翻贴图和更新 facingDir    /* ---------- 修改 SetFacing ---------- */
-    // public void SetFacing(int dir)
-    // {
-    //     if (dir == 0) return;          // 0 = 保持原朝向
-    //     facingDir = dir > 0 ? +1 : -1; // +1=向右，-1=向左
-
-    //     Vector3 s  = transform.localScale;
-    //     // 公式：绝对值 × 移动方向 × 贴图默认朝向
-    //     s.x = Mathf.Abs(_baseScaleX) * facingDir * _graphicDir;
-    //     transform.localScale = s;
-    // }
     public void SetFacing(int dir)
     {
-        if (dir == 0) return;          // 0 = 保持原朝向
-        Facing = dir > 0 ? +1 : -1;    // 更新Facing属性
-        facingDir = Facing;             // 保持与现有字段的同步
+        if (dir == 0) return;          // 0 = maintain original orientation
+        Facing = dir > 0 ? +1 : -1;    // Update Facing property
+        facingDir = Facing;             // Keep in sync with existing field
 
         Vector3 s  = transform.localScale;
-        // 公式：绝对值 × 移动方向 × 贴图默认朝向
+        // Formula: Absolute value × Movement direction × Default graphic direction
         s.x = Mathf.Abs(_baseScaleX) * Facing * _graphicDir;
         transform.localScale = s;
     }
 
-    // 这里保留 SetAnimMove，但改为两个参数：水平速度 和 “是否在追击”
+    // two parameters: horizontal speed and "is chasing"
     public void SetAnimMove(float vx, bool isChasing)
     {
         _anim?.SetFloat("Speed", Mathf.Abs(vx));
         _anim?.SetBool("IsChasing", isChasing);
 
-        // ★ 只要 vx 非 0，就调用 SetFacing(vx>0?+1:-1)
+        //  As long as vx is not 0, call SetFacing(vx>0?+1:-1)
         if (Mathf.Abs(vx) > 0.001f)
         {
             SetFacing((int)Mathf.Sign(vx));
@@ -286,9 +320,6 @@ private void Update()
         if (fov > 0f && fov < 360f)
         {
             Gizmos.color = Color.cyan;
-            //Vector3 fwd = Vector3.right * Mathf.Sign(transform.localScale.x);
-            //Vector3 fwd = Vector3.left * Mathf.Sign(transform.localScale.x);
-
             Vector3 fwd = Vector3.right * facingDir;
 
             Quaternion q1 = Quaternion.AngleAxis(+fov * 0.5f, Vector3.forward);

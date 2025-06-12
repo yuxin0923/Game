@@ -10,55 +10,55 @@ using TMPro;    // 引用 TextMeshPro 命名空间，以便显示钥匙数量
 namespace World
 {
     /// <summary>
-    /// Door：完全使用自写物理引擎的 AABB 检测来判断玩家是否“站在门前”并且钥匙足够，
-    /// 一旦满足条件，就播放开门动画（如果有）并延时切换到下一个场景。
-    ///
-    /// 说明：
-    /// - 本脚本不依赖任何 Unity Collider2D / Rigidbody2D。
-    /// - “门”的碰撞区域用两个字段：doorCenter（中心坐标）和 doorHalfSize（半宽半高）来表示一个 AABB。
-    /// - 玩家碰撞盒由 SimplePhysicsBody 提供的 halfSize 属性决定，中心由 transform.position 决定。
-    /// - 当玩家的 AABB 与门的 AABB 相交，并且 player.keyCount >= requiredKeys 时，触发开门。
+    /// Door: Uses entirely self-written physics engine AABB detection to determine if the player is “standing in front of the door” and has enough keys, 
+    /// Once this is the case, the door opening animation is played (if any) and delayed to switch to the next scene.
+    /// 
+    /// Description: 
+    /// - This script does not rely on any Unity Collider2D / Rigidbody2D. 
+    /// - The collision area of the “door” is represented by two fields: doorCenter and doorHalfSize. An AABB. 
+    /// - The player collision box is determined by the halfSize property provided by SimplePhysicsBody, and the center is determined by transform.position.
+    /// - Triggers the door opening when the player's AABB intersects the door's AABB and player.keyCount >= requiredKeys.
     /// </summary>
     public class Door : MonoBehaviour
     {
-        [Header("—— 门的 AABB 区域（无需 Unity Collider） ——")]
-        [Tooltip("门的中心坐标（世界坐标）。如果想让门跟随 GameObject 移动，可留空并在 Awake/Update 里同步 transform.position")]
+        [Header("—— Door AABB Area (No Unity Collider Required) ——")]
+        [Tooltip("Door center position (world coordinates). If you want the door to follow the GameObject, leave it empty and sync transform.position in Awake/Update.")]
         public Vector2 doorCenter = Vector2.zero;
 
-        [Tooltip("门的半宽半高（世界单位）。门的总宽度 = doorHalfSize.x * 2，总高度 = doorHalfSize.y * 2")]
+        [Tooltip("Door half-width and half-height (world units). Total width = doorHalfSize.x * 2, total height = doorHalfSize.y * 2")]
         public Vector2 doorHalfSize = new Vector2(1f, 2f);
 
-        [Header("—— 钥匙 & 场景切换 ——")]
-        [Tooltip("玩家需要持有的钥匙数量，才可打开此门")]
+        [Header("—— Key & Scene Transition ——")]
+        [Tooltip("The number of keys the player must hold to open this door")]
         public int requiredKeys = 1;
 
-        [Tooltip("开门之后要加载的下一个场景名称（必须加入 Build Settings）")]
+        [Tooltip("The name of the next scene to load after opening the door (must be added to Build Settings)")]
         public string nextSceneName;
 
-        [Header("—— 开门动画（可选） ——")]
-        [Tooltip("如果门有开／关两段动画，请挂上门物体的 Animator；若无动画可留空")]
+        [Header("—— Door Opening Animation (Optional) ——")]
+        [Tooltip("If the door has open/close animations, attach the door object's Animator here; leave empty if no animation")]
         public Animator animator;
 
-        [Tooltip("Animator 中控制开门的 bool 参数名称，默认为 “isOpen”。需与 Animator Controller 中的参数保持一致")]
+        [Tooltip("The name of the bool parameter in the Animator that controls the door opening, default is “isOpen”. Must match the parameter in the Animator Controller.")]
         public string isOpenParam = "isOpen";
 
-        [Tooltip("播放开门动画后等待多少秒再 LoadScene，保证动画播放完毕")]
+        [Tooltip("Wait how many seconds after playing the door opening animation before LoadScene, to ensure the animation is finished")]
         public float openToLoadDelay = 1.0f;
 
 
 
 
-        [Header("UI 显示——拖拽下面的 KeyText")]
+        [Header("UI Display - Drag the KeyText Below")]
         [SerializeField] TMP_Text keyText;
 
-        // —— 私有字段 —— 
-        private Player.Player playerRef;          // 场景中挂有 Player.Player 的玩家引用
-        private SimplePhysicsBody playerBody;     // 玩家身上的 SimplePhysicsBody，以便获取 halfSize
-        private bool hasOpened = false;           // 防止重复触发开门逻辑
+        // —— Private Fields —— 
+        private Player.Player playerRef;          // Reference to the Player.Player in the scene
+        private SimplePhysicsBody playerBody;     // Reference to the SimplePhysicsBody on the player
+        private bool hasOpened = false;           // Prevents re-triggering the door opening logic
 
         void Awake()
         {
-            // 如果在 Inspector 中 doorCenter 没指定，就把它设为当前 GameObject 的位置：
+            // If doorCenter is not specified in the Inspector, set it to the current GameObject's position:
             if (doorCenter == Vector2.zero)
             {
                 doorCenter = transform.position;
@@ -67,7 +67,7 @@ namespace World
 
         void Start()
         {
-            // 1) 寻找场景中唯一的 Player.Player
+            // 1) Find the unique Player.Player in the scene
             playerRef = FindObjectOfType<Player.Player>();
             if (playerRef == null)
             {
@@ -75,22 +75,22 @@ namespace World
                 return;
             }
 
-            // 2) 获取 Player 上的 SimplePhysicsBody，以便拿到玩家碰撞盒的 halfSize
+            // 2) Get the SimplePhysicsBody on the Player to access the player's collision box halfSize
             playerBody = playerRef.GetComponent<SimplePhysicsBody>();
             if (playerBody == null)
             {
                 Debug.LogError("[Door]：Player 身上没有挂 SimplePhysicsBody，请确认已挂载。");
             }
 
-            // 3) 如果想用动画，一定要把 Animator 拖到 Inspector；否则会打 Warning
+            // 3) If you want to use animations, make sure to drag the Animator to the Inspector; otherwise, a warning will be issued
             if (animator == null)
             {
                 Debug.LogWarning("[Door]：未指定 Animator，开门时不会播放动画，只会直接延时切换场景。");
             }
 
-            // 初始化一次文字
+            // Initialize the key display
             UpdateKeyDisplay();
-            // 订阅：只要玩家每收集到一把钥匙，就刷新显示
+            // Subscribe: Refresh the display whenever the player collects a key
             GameEvents.OnKeyCollected += UpdateKeyDisplay;
         }
 
@@ -100,12 +100,12 @@ namespace World
             GameEvents.OnKeyCollected -= UpdateKeyDisplay;
         }
 
-        // 每次钥匙收集后，玩家的 keyCount 会 +1 → 这里拿最新的值来刷新
+        // Each time a key is collected, the player's keyCount will be +1 → here we take the latest value and refresh it.
         void UpdateKeyDisplay()
         {
             if (keyText != null)
             {
-                // 在这里拼字符串，前面加上 "keys: "
+                // Here we construct the string, prefixing it with "keys: "
                 keyText.text = $"keys: {playerRef.keyCount}/{requiredKeys}";
             }
         }
@@ -113,36 +113,36 @@ namespace World
 
         void Update()
         {
-            // 如果已经打开过一次，无需再检测
+            // If hasOpened is true, no need to check again
             if (hasOpened) return;
             if (playerRef == null || playerBody == null) return;
 
-            // —— 一：判断钥匙数量是否满足 —— 
+            // - I: Determine whether the number of keys meets the requirement
             if (playerRef.keyCount < requiredKeys)
             {
                 return;
             }
 
-            // —— 二：更新 doorCenter 以保持跟随 GameObject —— 
-            // 如果你希望门逻辑与这个脚本所在物体的位置同步，可以取消下面注释：
+            // - II: Update doorCenter to follow GameObject
+            // If you want the door logic to sync with the position of the GameObject this script is attached to, you can uncomment the line below:
             // doorCenter = transform.position;
 
-            // —— 三：构造玩家的 AABB —— 
+            // - III: Construct the player's AABB
             Vector2 playerCenter = playerRef.transform.position;
             Vector2 playerHalfSize = playerBody.halfSize;
 
-            // —— 四：检测 AABB 相交 —— 
+            // - IV: Check AABB intersection
             if (IsAABBIntersect(playerCenter, playerHalfSize, doorCenter, doorHalfSize))
             {
-                // 玩家与门的矩形区域相交且钥匙数量足够 → 开门
+                // Player's AABB intersects with the door's AABB and key count is sufficient → Open the door
                 TriggerOpenDoor();
             }
         }
 
         /// <summary>
-        /// 判断两个 AABB（Axis‐Aligned Bounding Box）是否相交
-        /// centerA / halfA：物体 A 的中心 + 半尺寸
-        /// centerB / halfB：物体 B 的中心 + 半尺寸
+        /// Determine if two AABBs (Axis-Aligned Bounding Boxes) intersect 
+        /// centerA / halfA: center of object A + half size 
+        /// centerB / halfB: center of object B + half size
         /// </summary>
         private bool IsAABBIntersect(Vector2 centerA, Vector2 halfA, Vector2 centerB, Vector2 halfB)
         {
@@ -152,38 +152,38 @@ namespace World
         }
 
         /// <summary>
-        /// 触发“开门”逻辑：播放动画（如果有），然后延时加载下一个场景
+        /// Trigger the "open door" logic: play animation (if any), then delay loading the next scene
         /// </summary>
         private void TriggerOpenDoor()
         {
             hasOpened = true;
 
-            // 1) 播放开门动画（如果 Animator 非空）
+            // 1)  Play the door opening animation (if Animator is not empty)
             if (animator != null && !string.IsNullOrEmpty(isOpenParam))
             {
                 animator.SetBool(isOpenParam, true);
             }
 
-            // 2) 启动协程：等待动画播放完毕后再切场景
+            // 2) Start the coroutine: wait for the animation to finish before changing scenes
             StartCoroutine(OpenAndLoadCoroutine());
         }
 
         private IEnumerator OpenAndLoadCoroutine()
         {
-            // 等待一段时间以保证动画完整播放。若不需要动画，可将 openToLoadDelay 设为 0。
+            // Wait for a while to ensure the animation plays completely. If no animation is needed, set openToLoadDelay to 0.
             yield return new WaitForSeconds(openToLoadDelay);
 
-            // 检查下一个场景名是否为空
+            // Check if the next scene name is empty
             if (string.IsNullOrEmpty(nextSceneName))
             {
-                Debug.LogError("[Door]：nextSceneName 为空，无法切换场景。请在 Inspector 中填写正确的场景名，并确保已添加到 Build Settings。");
+                Debug.LogError("[Door]：nextSceneName is empty, you can't switch scenes. Please fill in the correct scene name in Inspector and make sure it is added to Build Settings.");
                 yield break;
             }
 
             GameEvents.OnDoorOpened?.Invoke(nextSceneName);
 
-            // 日志提示
-            Debug.Log($"[Door]：玩家钥匙数量≥{requiredKeys} 且已站在门前，正在加载场景 “{nextSceneName}” …");
+            // Log message
+            Debug.Log($"[Door]：Player's key count ≥ {requiredKeys} and standing in front of the door, loading scene “{nextSceneName}” …");
             // SceneManager.LoadScene(nextSceneName);
 
 
@@ -191,19 +191,19 @@ namespace World
 
 #if UNITY_EDITOR
         /// <summary>
-        /// 在编辑器的 Scene 视图里画出门的 AABB 区域，方便调整和可视化。
+        /// Draws the door's AABB area in the Scene view of the editor for easy adjustment and visualization.
         /// </summary>
         void OnDrawGizmosSelected()
         {
-            // 门的中心：如果 doorCenter 未设过，就使用 transform.position
+            // Door's center: If doorCenter is not set, use transform.position
             Vector2 center = (doorCenter == Vector2.zero) ? (Vector2)transform.position : doorCenter;
 
-            Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);                     // 半透明橙色表示填充
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);                     // Semi-transparent orange fill
             Vector3 gizCenter = new Vector3(center.x, center.y, 0f);
             Vector3 gizSize = new Vector3(doorHalfSize.x * 2, doorHalfSize.y * 2, 0f);
             Gizmos.DrawCube(gizCenter, gizSize);
 
-            Gizmos.color = Color.yellow;                                      // 黄色线条轮廓
+            Gizmos.color = Color.yellow;                                      // Yellow wireframe
             Gizmos.DrawWireCube(gizCenter, gizSize);
         }
 #endif

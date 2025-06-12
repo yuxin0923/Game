@@ -1,17 +1,17 @@
 // Assets/Scripts/UI/EndGameMenu.cs
 using UnityEngine;
 using UnityEngine.UI;
-using GameCore;                  // 用到 GameManager.I
+using GameCore;                  // Use the GameManager.
 using UnityEngine.SceneManagement;
 
 namespace UI
 {
-    /// <summary>胜利场景（GameEnd）里的两个按钮。</summary>
+    /// <summary>Victory scene (GameEnd) with two buttons.</summary>
     public class EndGameMenu : MonoBehaviour
     {
         [Header("Buttons")]
-        public Button btnMainMenu;   // 返回主菜单
-        public Button btnQuit;       // 退出游戏
+        public Button btnMainMenu;   // Return to main menu
+        public Button btnQuit;       // Quit game
 
         private void Awake()
         {
@@ -26,9 +26,9 @@ namespace UI
         private static void QuitGame()
         {
     #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;   // 仅在编辑器
+            UnityEditor.EditorApplication.isPlaying = false;   // Only in editor
     #else
-            Application.Quit();                                // 真机 / PC 版
+            Application.Quit();                                // Standalone / PC version
     #endif
         }
     }

@@ -3,36 +3,31 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 世界级 Tilemap 碰撞查询中心（支持多张 Tilemap）。
-/// 场景里只保留 1 个即可 —— 把要参与“碰撞判断”的 Tilemap
-/// 全部拖到 inspector 的 List 里。
+/// World-class Tilemap collision query center (supports multiple Tilemaps).
+/// Keep only 1 in the scene - drag all the Tilemaps 
+/// that you want to participate in “collision determination” to the inspector's List.
 /// </summary>
 public class TilemapWorld : MonoBehaviour
 {
-    /* -------- 单例入口 -------- */
+    /* -------- Singleton Entry -------- */
     public static TilemapWorld I { get; private set; }
 
-    /* -------- 在 Inspector 里拖入多张 Tilemap -------- */
-    [Tooltip("所有需要参与碰撞的 Tilemap；可拖多张")]
+    /* -------- Drag multiple Tilemaps into the Inspector -------- */
+    [Tooltip("All Tilemaps that need to participate in collision; can drag multiple")]
     public List<Tilemap> solidTilemaps = new();
 
-
-
-
-
-
-    /* ---------- TilemapWorld.cs 追加 ---------- */
-    [System.Serializable]                      // Inspector 里可展开的结构体
+    /* ---------- TilemapWorld.cs  ---------- */
+    [System.Serializable]                      // Expandable Structures in Inspector
     public struct SurfaceLayer
     {
-        public Tilemap tilemap;               // 这一层的瓦片
-        public PhysicsMaterial material;      // 对应的物理材质
+        public Tilemap tilemap;               // This layer's tiles
+        public PhysicsMaterial material;      // Corresponding physics material
     }
 
-    [Tooltip("不同摩擦材质的 Tilemap 列表")]
+    [Tooltip("Different friction materials' Tilemap list")]
     public List<SurfaceLayer> surfaceLayers = new();
 
-    /// <summary>返回 worldPos 所在瓦片的 PhysicsMaterial；找不到则返回 null</summary>
+    /// <summary>Returns the PhysicsMaterial of the tile at worldPos; returns null if not found</summary>
     public PhysicsMaterial GetMaterial(Vector2 worldPos)
     {
         foreach (var layer in surfaceLayers)
@@ -42,41 +37,37 @@ public class TilemapWorld : MonoBehaviour
             if (layer.tilemap.HasTile(cell))
                 return layer.material;
         }
-        return null;                          // 没特殊材质就走默认
+        return null;                          // No special material found, use default
     }
 
-
-
-    
-
-    /* -------- 生命周期 -------- */
+    /* -------- Lifecycle -------- */
     void Awake()
     {
         if (I && I != this)
         {
-            Debug.LogWarning("[TilemapWorld] 场景里已有实例，自动销毁重复脚本。");
+            Debug.LogWarning("[TilemapWorld] Another instance exists in the scene, automatically destroying duplicate script.");
             Destroy(gameObject);
             return;
         }
         I = this;
     }
 
-    /* -------- 对外 API：给世界坐标，判断是否是“实心砖” -------- */
+    /* -------- External API: Given a world position, determine if it's a "solid brick" -------- */
     public bool IsSolid(Vector2 worldPos)
     {
         if (solidTilemaps == null || solidTilemaps.Count == 0) return false;
 
         foreach (var map in solidTilemaps)
         {
-            if (map == null) continue;                          // 防空
+            if (map == null) continue;                          // anti-aircraft defense
             Vector3Int cell = map.WorldToCell(worldPos);
-            if (map.HasTile(cell)) return true;                 // 任意一张有砖即实心
+            if (map.HasTile(cell)) return true;                 // Any tile present means solid
         }
         return false;
     }
 
 #if UNITY_EDITOR
-    /* 在编辑器里 Scene 视图实时预览：绿色=空，红色=实心 */
+    /* -------- Scene View Real-time Preview in Editor: Green = Empty, Red = Solid -------- */
     void OnDrawGizmosSelected()
     {
         if (!Application.isPlaying) return;

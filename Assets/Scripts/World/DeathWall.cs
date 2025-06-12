@@ -43,7 +43,7 @@ namespace World
             Vector2 pCenter = playerRef.transform.position;
             Vector2 pHalf = playerBody.halfSize;
 
-            // 使用物理引擎的AABB检测方法
+            // AABB detection methods using the physics engine
             if (CollisionDetector.AABBOverlap(pCenter, pHalf, wallCenter, wallHalfSize))
             {
                 playerRef.Die();

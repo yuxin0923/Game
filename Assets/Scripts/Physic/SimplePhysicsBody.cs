@@ -1,89 +1,89 @@
 using UnityEngine;
 
-/// 极简 2D AABB 刚体 + Tilemap 碰撞（不依赖 Unity 内置物理）
+///  Minimalist 2D AABB Rigid Body + Tilemap Collision (Doesn't rely on Unity's built-in physics)
 [RequireComponent(typeof(Transform))]
 public class SimplePhysicsBody : MonoBehaviour
 {
-    /* --- 尺寸 / 重力 --------------------------------------------------- */
-    [Header("尺寸 / 重力")]
+    /* --- Size / Gravity --------------------------------------------------- */
+    [Header("Size / Gravity")]
     public Vector2 halfSize = new(0.45f, 0.45f);
-    public Vector2 HalfSize => halfSize;            // 供 AI / 其他脚本采样
+    public Vector2 HalfSize => halfSize;            // For AI / other scripts to sample
 
     public float gravity = -30f;
 
     [HideInInspector] public Vector2 velocity;
     [HideInInspector] public bool    grounded;
 
-    const float STEP = 0.05f;                       // 单帧最大分片位移
+    const float STEP = 0.05f;                       // Maximum fragment displacement per frame
 
     void Start()     => PhysicsEngine.I.Register(this);
     void OnDisable() { if (PhysicsEngine.I) PhysicsEngine.I.Unregister(this); }
 
-    /* --- 物理材质 ----------------------------------------------------- */
-    [Header("物理材质")]
+    /* --- Physics Material ----------------------------------------------------- */
+    [Header("Physics Material")]
     public PhysicsMaterial defaultMaterial;
-    PhysicsMaterial currentMaterial;                // null -> 用 default
+    PhysicsMaterial currentMaterial;                // null -> use default
 
-    /// <summary>外部（如移动平台）可强行指定材质</summary>
+    /// <summary>External (e.g. moving platforms) can be forced to specify material</summary>
     public void SetSurfaceMaterial(PhysicsMaterial mat)
     {
         currentMaterial = mat ?? defaultMaterial;
     }
 
-    /// <summary>让材质回到默认（通常在离开平台时调用）</summary>
+    /// <summary>Reset the material to default (usually called when leaving a platform)</summary>
     public void ResetSurfaceMaterial() => currentMaterial = defaultMaterial;
 
-    /* --- 移动动力学参数 ----------------------------------------------- */
-    [Header("移动参数")]
-    [Tooltip("地面最大加速度 (m/s²)")]
+    /* --- Movement Dynamics Parameters ----------------------------------------------- */
+    [Header("Movement Parameters")]
+    [Tooltip("Maximum ground acceleration (m/s²)")]
     public float baseGroundAccel = 50f;
 
     float _moveInput; // [-1,1]
-    float _reqSpeed;  // 由 Player / AI 指定
+    float _reqSpeed;  // Specified by Player / AI
 
-    /// <summary>每帧把水平输入写进刚体</summary>
+    /// <summary>Write horizontal inputs to the rigid body every frame</summary>
     public void SetMoveInput(float dir, float speed)
     {
         _moveInput = Mathf.Clamp(dir, -1f, 1f);
         _reqSpeed  = Mathf.Abs(speed);
     }
 
-    /* ----------------------- 主循环：由 PhysicsEngine 调用 ------------- */
+    /* ----------------------- Main Loop: Called by PhysicsEngine ------------- */
     public void Tick(float dt)
     {
-        /* 1. 脚底采样：仅在本身 grounded 且没被外部强制材质时进行 */
+        /* 1. Foot Sampling: Only when grounded and not externally forced */
         if (grounded)
         {
             Vector2 probe = (Vector2)transform.position - new Vector2(0, halfSize.y + 0.02f);
             var tileMat = TilemapWorld.I?.GetMaterial(probe);
-            // 若外部脚本(移动平台)已在上一帧设定特定材质，则优先保持
+            // If an external script (moving platform) has set a specific material in the previous frame, keep it
             if (currentMaterial == null || currentMaterial == defaultMaterial)
                 currentMaterial = tileMat ?? defaultMaterial;
         }
         else
         {
-            // 空中保持默认材质，以免被上一帧残留影响
+            // Keep default material in the air to avoid being affected by the previous frame
             currentMaterial = defaultMaterial;
         }
 
-        float friction = GetFriction();            // 0(冰) ~ 1(泥)
+        float friction = GetFriction();            // 0(Ice) ~ 1(Mud)
 
-        /* 2. 水平速度渐变 ---------------------------------------------- */
+        /* 2. Horizontal Speed Smoothing ---------------------------------------------- */
         float targetSpeed = _moveInput * _reqSpeed;
         float accel       = Mathf.Lerp(10f, baseGroundAccel, friction);
-        float curAccel    = grounded ? accel : accel * 0.3f; // 空中推力减弱
+        float curAccel    = grounded ? accel : accel * 0.3f; // Air thrust weakened
         velocity.x = Mathf.MoveTowards(velocity.x, targetSpeed, curAccel * dt);
 
-        /* 3. 垂直方向重力 ---------------------------------------------- */
+        /* 3. Vertical Gravity ---------------------------------------------- */
         velocity.y += gravity * dt;
-        grounded = false;                            // 将在 MoveAxis 中重新判定
+        grounded = false;                            // Will be re-evaluated in MoveAxis
 
-        /* 4. 分轴移动 & 碰撞 ----------------------------------------- */
+        /* 4. Axis Movement & Collision ----------------------------------------- */
         MoveAxis(ref velocity.x, Vector2.right, dt);
         MoveAxis(ref velocity.y, Vector2.up,    dt);
     }
 
-    /* ------------------------ 内部工具 ------------------------------- */
+    /* ------------------------ Internal Tools ------------------------------- */
     float GetFriction() => currentMaterial ? currentMaterial.friction : 0.5f;
 
     void MoveAxis(ref float vAxis, Vector2 axis, float dt)
@@ -97,37 +97,37 @@ public class SimplePhysicsBody : MonoBehaviour
             float step = Mathf.Min(STEP, rest);
             Vector2 next = (Vector2)transform.position + axis * step * dir;
 
-            // —— 这里同时检测瓦片 和 平台 —— 
+            // —— Here we check both tiles and platforms simultaneously ——
             if (HitTile(next) || HitPlatform(next))
             {
-                // 回退到刚好不碰撞的位置
+                // Revert to the position just before the collision
                 while (HitTile(next) || HitPlatform(next))
                     next -= axis * 0.001f * dir;
                 transform.position = next;
 
-                // 撞墙或者落地都要把速度归零
+                // Reset velocity on wall hit or landing
                 vAxis = 0f;
-                // 如果是垂直向下，标记着地
+                // If moving downwards, mark as grounded
                 if (axis == Vector2.up && dir < 0)
                     grounded = true;
                 return;
             }
 
-            // 没撞到，就更新位置，继续下一小步
+            // If you don't hit it, update your position and move on to the next small step.
             transform.position = next;
             rest -= step;
         }
     }
 
     /// <summary>
-    /// 检查 next 位置的 AABB（center=next, halfSize=this.halfSize）
-    /// 会不会和任何一个 MovingPlatform 重叠
+    /// Checks if the AABB at the next position (center=next, halfSize=this.halfSize)
+    /// overlaps with any MovingPlatform.
     /// </summary>
     bool HitPlatform(Vector2 pos)
     {
         foreach (var p in PhysicsEngine.I.Platforms)
         {
-            // 平台的实际中心 = transform.position + centerOffset
+            // Platform's actual center = transform.position + centerOffset
             Vector2 center = (Vector2)p.transform.position + p.centerOffset;
             Vector2 half   = p.halfSize;
             if (CollisionDetector.AABBOverlap(pos, halfSize, center, half))
@@ -142,16 +142,16 @@ public class SimplePhysicsBody : MonoBehaviour
         Vector2 max = pos + halfSize;
         float midY = (min.y + max.y) * 0.5f;
 
-        // 左边 3 点
+        // Left 3 points
         if (IsSolid(min.x, min.y) || IsSolid(min.x, midY) || IsSolid(min.x, max.y)) return true;
-        // 右边 3 点
+        // Right 3 points
         if (IsSolid(max.x, min.y) || IsSolid(max.x, midY) || IsSolid(max.x, max.y)) return true;
         return false;
     }
 
     static bool IsSolid(float x, float y) => TilemapWorld.I.IsSolid(new Vector2(x, y));
 
-    /// <summary>兼容旧 Enemy / Platform 调用：仍可直接更改水平速度</summary>
+    /// <summary>Compatible with old Enemy / Platform calls: can still directly change horizontal speed</summary>
     public void MoveHoriz(float dir, float speed) => SetMoveInput(dir, speed);
 
 #if UNITY_EDITOR

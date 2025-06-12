@@ -1,12 +1,11 @@
 using UnityEngine;
-using GameCore; // 引用 GameCore 命名空间，以便访问 GameEvents
-
+using GameCore; 
 
 namespace World
 {
     public class Key : MonoBehaviour
     {
-        /* 大小默认 0.4×0.4，可在 Inspector 调 */
+        /* Default size 0.4×0.4, can be adjusted in Inspector */
         public Vector2 halfSize = new(0.2f, 0.2f);
 
         bool collected;
@@ -40,9 +39,9 @@ namespace World
             p.AddKey();
 
 
-            GameEvents.OnKeyCollected?.Invoke();  // 通知关卡逻辑
+            GameEvents.OnKeyCollected?.Invoke();  // Notify level logic
 
-            /* 动效：先隐藏渲染器再销毁 */
+            /* Animation: Hide the renderer first, then destroy */
             var sr = GetComponent<SpriteRenderer>();
             if (sr) sr.enabled = false;
             Destroy(gameObject, 0.1f);

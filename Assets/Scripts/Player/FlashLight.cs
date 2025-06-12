@@ -1,22 +1,22 @@
 // Assets/Scripts/Player/Flashlight.cs
 using UnityEngine;
-using UnityEngine.Rendering.Universal; // 若无需灯光可删
+using UnityEngine.Rendering.Universal; 
 
 public class Flashlight : MonoBehaviour
 {
     [Header("Flashlight Settings")]
-    public float maxCharge           = 100f;   // 最大电量
-    public float chargeDepletionRate = 5f;     // 不充电时，每秒掉电量
-    public float rechargeRate        = 25f;    // 充电时，每秒回血量
+    public float maxCharge           = 100f;   // Maximum charge
+    public float chargeDepletionRate = 5f;     // Charge depletion rate per second when not recharging
+    public float rechargeRate        = 25f;    // Charge recharge rate per second
 
     [Header("Optional Visual")]
-    public Light2D light2D;                   // 若有 2D 灯光，可拖进来
+    public Light2D light2D;                   // If there's a 2D light, you can drag it in
 
     public float CurrentCharge { get; private set; }
 
     bool isRecharging;
     bool hasDied;
-    Player.Player owner;                     // 引用 Player 用于死亡
+    Player.Player owner;                     // Reference to Player for death
 
     void Awake()
     {
@@ -38,7 +38,7 @@ public class Flashlight : MonoBehaviour
         CheckForDeath();
     }
 
-    // ——仅根据 isRecharging，增/减电量——
+    // ——Increase/decrease power only according to isRecharging——
     void UpdateCharge(float deltaTime)
     {
         if (isRecharging)
@@ -49,14 +49,14 @@ public class Flashlight : MonoBehaviour
         CurrentCharge = Mathf.Clamp(CurrentCharge, 0f, maxCharge);
     }
 
-    // ——灯光强度随电量明暗——
+    // ——Light intensity changes with charge——
     void UpdateLightIntensity()
     {
         if (light2D)
             light2D.intensity = CurrentCharge / maxCharge;
     }
 
-    // ——电量耗尽时只触发一次 Player.Die()——
+    // ——Only trigger Player.Die() once when out of power——
     void CheckForDeath()
     {
         if (hasDied) return;
@@ -71,7 +71,7 @@ public class Flashlight : MonoBehaviour
     public void DrainAll()
     {
         CurrentCharge = 0f;
-        // 立即更新一次灯光强度，保证视觉上熄灭
+        // Immediately update light intensity to ensure visual extinguishing
         if (light2D)
             light2D.intensity = 0f;
     }
@@ -85,7 +85,7 @@ public class Flashlight : MonoBehaviour
         if (light2D)
             light2D.intensity = CurrentCharge / maxCharge;
 
-        // 如果扣完了，就调用玩家的 Die()
+        // If depleted, call Player's Die()
         if (CurrentCharge <= 0f && owner != null)
         {
             hasDied = true;
@@ -93,7 +93,7 @@ public class Flashlight : MonoBehaviour
         }
     }
 
-    // 供 Player 或外部调用
+    // For Player or external calls
     public void StartRecharge() => isRecharging = true;
     public void StopRecharge()  => isRecharging = false;
 

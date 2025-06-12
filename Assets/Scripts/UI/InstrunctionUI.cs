@@ -1,19 +1,19 @@
 using UnityEngine;
 using UnityEngine.UI;
-using GameCore;         // 引用 SceneLoader
+using GameCore;        
 
 public class InstructionUI : MonoBehaviour
 {
     [Header("Sprites in order")]
-    [SerializeField] Sprite[] pages;        // 拖 2–3 张
+    [SerializeField] Sprite[] pages;        
 
     [Header("Scene refs")]
-    [SerializeField] Image   pageImage;     // Image_Page
+    [SerializeField] Image   pageImage;     
     [SerializeField] Button  btnPrev;
     [SerializeField] Button  btnNext;
     [SerializeField] Button  btnBack;
 
-    int index;     // 当前页
+    int index;     // Current page
 
     void Start()
     {
@@ -38,7 +38,7 @@ public class InstructionUI : MonoBehaviour
         Debug.Log("Set sprite to " + pages[index].name);
         pageImage.sprite = pages[index];
 
-        // 边界时禁按钮
+        // Ban button at the border
         btnPrev.interactable = index > 0;
         btnNext.interactable = index < pages.Length - 1;
     }

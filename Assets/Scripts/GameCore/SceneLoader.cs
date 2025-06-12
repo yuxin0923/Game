@@ -3,8 +3,8 @@ using UnityEngine.SceneManagement;
 namespace GameCore
 {
     /// <summary>
-    /// 封装 UnityEngine.SceneManagement.SceneManager.LoadScene，
-    /// 以后要加过渡、异步，改这里即可。
+    /// Wrapping UnityEngine.SceneManagement.SceneManager.LoadScene, 
+    /// If you want to add transitions and asynchrony in the future, just change it here.
     /// </summary>
     public static class SceneLoader
     {

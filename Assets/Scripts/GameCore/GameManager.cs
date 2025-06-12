@@ -1,7 +1,30 @@
+/*
+GameManager.cs — Central Game Flow Controller
+=====================================================
+Purpose
+-------
+`GameManager` owns the high-level state machine that drives the entire game loop: **Main Menu → Level Select → Playing → Paused / Died → Game Over**.  It also exposes a singleton handle (`GameManager.I`) so any script—from UI buttons to world triggers—can request a state change in one line.
+
+Key Responsibilities
+--------------------
+1. **Finite-State Machine (`GameState`)** – decides which scene and UI screen should be active.
+2. **Scene Loading** – calls `SceneManager.LoadScene()` when a new level or menu is required.
+3. **Time Control** – toggles `Time.timeScale` for global pause / resume.
+4. **Event Hub** – subscribes to `GameEvents` (door opened, player died, etc.) and reacts accordingly.
+5. **UI Bridge** – informs `UIManager` which canvas to show once the new scene finishes loading.
+
+Why This Design Helps Maintenance
+---------------------------------
+* **Add a New Game Phase Easily** – just append a value to `GameState`, handle it in `ChangeState`, and (optionally) add a UI panel.  No other script needs editing.
+* **Menu & Gameplay Decoupled** – gameplay scenes never reference UI canvases directly; they only raise events.  UI can be redesigned without touching core game code.
+* **Single Source of Truth** – pause, restart, or quit logic lives in one place, preventing desynchronised states.
+* **Scalable to Async Loading** – if you move to `Addressables` or additive scenes, replace the `SceneManager.LoadScene` lines; state logic stays intact.
+* **Extensible Events** – new world events (e.g. checkpoint reached) can be wired into the same pattern: raise an event → listen in `GameManager` → call `ChangeState`.
+*/
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using GameCore;    // 自己的命名空间
-using UI;          // 引用你 UI 包里的 UIManager
+using GameCore;   
+using UI;          
 
 namespace GameCore
 {
@@ -20,16 +43,16 @@ namespace GameCore
         public static GameManager I { get; private set; }
         public GameState State { get; private set; }
 
-        // 下一个要加载的关卡 Scene 名
+        // Next level to be loaded Scene name
         private string nextSceneName;
-        // 切场景之后再切 UI
+        // Switch UI after changing scene
         private bool changingState;
         private bool isPaused = false; 
         private void SetPaused(bool paused) => Time.timeScale = paused ? 0f : 1f;
 
         private void Awake()
         {
-            // 单例
+            // Singleton
             if (I != null && I != this)
             {
                 Destroy(gameObject);
@@ -38,12 +61,12 @@ namespace GameCore
             I = this;
             DontDestroyOnLoad(gameObject);
 
-            // 订阅世界事件
+            // Subscribe to world events
             GameEvents.OnDoorOpened += OnDoorOpened;
             GameEvents.OnPlayerDied += OnPlayerDied;
             GameEvents.OnInstructionRequested += OnInstructionRequested;
 
-            // 监听场景加载完
+            // Listen for scene loaded
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -55,7 +78,7 @@ namespace GameCore
         }
 
         /// <summary>
-        /// 从选关或重试按钮调用，启动新关
+        /// Called from level select or retry button to start a new level
         /// </summary>
         public void StartLevel(string sceneName)
         {
@@ -88,10 +111,10 @@ namespace GameCore
 
             if (nextScene == "GameEnd")
             {
-                ChangeState(GameState.GameOver); // 会在下面 case 里 LoadScene("GameEnd")
+                ChangeState(GameState.GameOver); // Will LoadScene("GameEnd") in the case below
                 return;
             }
-            // 解锁下一个关卡
+            // Unlock next level
             var cur = SceneManager.GetActiveScene().name;
             if (cur.StartsWith("Level") && int.TryParse(cur.Substring(5), out int n))
             {
@@ -100,54 +123,54 @@ namespace GameCore
 
 
 
-            // 直接开始下一关
-            StartLevel(nextScene);   // ← 复用你已有的启动关卡方法
+            // Directly start the next level
+            StartLevel(nextScene);   
         }
 
-        // 死亡时调用：直接切到 GameOver
+        // Called when player dies: directly switch to GameOver
 
         private void OnPlayerDied()
         {
-            // 不切场景，只切状态
+            // No scene cuts, just state cuts
             ChangeState(GameState.Died);
         }
 
         public void ChangeState(GameState newState, string levelName = null)
         {
             State = newState;
-            changingState = true;  // 添加状态切换标记
+            changingState = true;  // Add state change flag
 
             switch (newState)
             {
                 case GameState.Menu:
                     SceneManager.LoadScene("MainMenu");
-                    // 移除 UIManager.I.ShowMenu();
+                    // Remove UIManager.I.ShowMenu();
                     break;
 
                 case GameState.LevelSelect:
                     SceneManager.LoadScene("LevelSelect");
-                    // 移除 UIManager.I.ShowLevelSelect();
+                    // Remove UIManager.I.ShowLevelSelect();
                     break;
 
                 case GameState.Playing:
-                    SetPaused(false);   // 暂停世界
+                    SetPaused(false);   // Pause the world
                     if (!string.IsNullOrEmpty(nextSceneName))
                     {
                         SceneManager.LoadScene(nextSceneName);
-                        // 移除 UIManager.I.ShowHUD();
+                        // Remove UIManager.I.ShowHUD();
                     }
                     break;
 
                 case GameState.GameOver:
-                    SceneManager.LoadScene("GameEnd");       // ← 修改
+                    SceneManager.LoadScene("GameEnd");       
                     break;
 
                 case GameState.Died:
-                    // 停止玩家输入
+                    // Stop player input
                     var player = FindObjectOfType<Player.Player>();
-                    SetPaused(true);   // 暂停世界
+                    SetPaused(true);   // Pause the world
                     if (player != null) player.enabled = false;
-                    UI.UIManager.I.ShowDeath();   // 见下文
+                    UI.UIManager.I.ShowDeath();   // See below
                     break;
             }
         }
@@ -156,16 +179,16 @@ namespace GameCore
 
 
         // ───────────────────────── RestartLevel ─────────────────────────
-        // ───────────────────────── RestartLevel ─────────────────────────
-        /// <summary>供 UI / 键盘调用，重新加载当前关</summary>
+     
+        /// <summary>For UI / keyboard calls, reload the current level.</summary>
         public void RestartLevel()
         {
-            // 1. 取得当前激活场景名
+            // 1. Get the current active scene name
             string cur = SceneManager.GetActiveScene().name;
 
-            // 2. 直接复用 StartLevel()，
-            //    这样会先写入 nextSceneName，然后切到 Playing 状态，
-            //    分支里必定能正确 LoadScene(cur)
+            // 2. Directly reuse StartLevel(),
+            //    This will write to nextSceneName first, then switch to Playing state,
+            //    The branch will definitely be able to correctly LoadScene(cur)
             StartLevel(cur);
         }
 
@@ -174,7 +197,7 @@ namespace GameCore
             if (!changingState) return;
             changingState = false;
 
-            // 添加空检查确保安全
+            // Add null check for safety
             if (UIManager.I == null)
             {
                 Debug.LogWarning("UIManager instance missing in scene");
@@ -198,17 +221,11 @@ namespace GameCore
             }
         }
 
-
-        /* ☆ 事件响应 */
         private void OnInstructionRequested()
         {
-            // 你可以直接 Load，也可以先 ChangeState(GameState.Menu) 再 Load
-            SceneLoader.Load("Instruction");   // 复用封装，未来改异步只动 SceneLoader
+            SceneLoader.Load("Instruction");   // Reuse encapsulation, future changes to async only affect SceneLoader
         }
         
-
-        
-
         
     }
 }

@@ -1,141 +1,38 @@
-// using UnityEngine;
-// using UnityEngine.UI;
-// using GameCore;
 
-// namespace UI
-// {
-//     public class UIManager : MonoBehaviour
-//     {
-//         public static UIManager I { get; private set; }
-
-//         /*―――― Canvas ――――*/
-//         [Header("—— Canvas 引用 ——")]
-//         public Canvas mainMenu;
-//         public Canvas levelSelect;
-//         public Canvas hud;
-//         public Canvas gameOver;
-//         public Canvas deathCanvas;    // “YOU DIED” 叠层
-        
-
-//                 // ---------- ① 声明按钮 ----------
-//         [Header("—— Instruction ——")]
-//         public Button instructionButton;
-
-
-//         /*―――― Buttons ――――*/
-//         [Header("—— 主菜单按钮 ——")]
-//         public Button playButton;
-//         public Button quitButton;
-
-//         [Header("—— GameOver / Death 按钮 ——")]
-//         public Button retryButton;
-//         public Button menuButton;
-//         public Button restartButton;  // 死亡层上的 Restart
-
-
-//          [Header("—— Pause 菜单按钮 ——")]
-//          public Canvas pauseMenu;            // 半透明暂停层
-//          public Button pauseButton;
-
-//         /*—— GameOver（通关）按钮 ——*/
-//         [Header("—— GameEnd Buttons ——")]
-//         public Button winMenuButton;   // 返回主菜单
-//         public Button winQuitButton;   // 退出游戏
-
-
-//         private void Awake()
-//         {
-//             if (I != null && I != this) { Destroy(gameObject); return; }
-//             I = this;
-
-//             /* 挂按钮回调 */
-//             if (playButton) playButton.onClick.AddListener(() => GameManager.I.ChangeState(GameState.LevelSelect));
-//             if (quitButton) quitButton.onClick.AddListener(Application.Quit);
-//             if (retryButton) retryButton.onClick.AddListener(() => GameManager.I.RestartLevel());
-//             if (menuButton) menuButton.onClick.AddListener(() => GameManager.I.ChangeState(GameState.Menu));
-//             if (restartButton) restartButton.onClick.AddListener(() => GameManager.I.RestartLevel());
-//             // ☆ 替换原来的直接跳转：
-//             if (instructionButton)
-//                 instructionButton.onClick.AddListener(
-//                     () => GameEvents.OnInstructionRequested?.Invoke()
-//                 );
-//             if (winMenuButton) winMenuButton.onClick.AddListener(() => GameManager.I.ChangeState(GameState.Menu));
-//             if (winQuitButton) winQuitButton.onClick.AddListener(Application.Quit);
-//             if (pauseButton)           pauseButton.onClick.AddListener(() => GameManager.I.Pause());
-//         }
-
-//         /*―――― 场景 UI 切换 ――――*/
-//         public void ShowMenu()
-//         {
-//             Set(mainMenu, true);
-//             Set(levelSelect, false);
-//             Set(hud, false);
-//             Set(gameOver, false);
-//             Set(deathCanvas, false);
-//             Set(pauseMenu,   false);
-//         }
-
-//         public void ShowLevelSelect()
-//         {
-//             Set(mainMenu, false);
-//             Set(levelSelect, true);
-//             Set(hud, false);
-//             Set(gameOver, false);
-//             Set(deathCanvas, false);
-//             Set(pauseMenu,   false);
-//         }
-
-//         public void ShowHUD()
-//         {
-//             Set(mainMenu, false);
-//             Set(levelSelect, false);
-//             Set(hud, true);
-//             Set(gameOver, false);
-//             Set(deathCanvas, false);
-//             Set(pauseMenu,   false);
-//         }
-
-//         public void ShowGameOver()
-//         {
-//             Set(mainMenu, false);
-//             Set(levelSelect, false);
-//             Set(hud, false);
-//             Set(gameOver, true);
-//             Set(deathCanvas, false);
-//             Set(pauseMenu,   false);
-//         }
-
-//         public void ShowDeath()
-//         {
-//             Set(mainMenu, false);
-//             Set(levelSelect, false);
-//             Set(hud, false);
-//             Set(gameOver, false);
-//             Set(deathCanvas, true);
-//             Set(pauseMenu,   false);
-//         }
-
-//         /*―――― 小工具：安全启/关 Canvas ――――*/
-//         private void Set(Canvas c, bool on)
-//         {
-//             if (c != null) c.enabled = on;
-//         }
-
-//         /* （可选）钥匙计数刷新 */
-//         public Text keyCounterText;
-//         public void UpdateKeyUI(int count)
-//         {
-//             if (keyCounterText) keyCounterText.text = count.ToString();
-//         }
-//     }
-// }
 using UnityEngine;
 using UnityEngine.UI;
-using GameCore;                        // 用于访问 GameManager
-using TMPro; //引入这个命名空间
+using GameCore;                       
+using TMPro; 
 
+/*
+ UIManager.cs — Central HUD / Menu Controller (Singleton + Facade / Mediator)
+ ---------------------------------------------------------------------------
+ • Role  
+   Provides a single switch-board for every in-game canvas (Main Menu, HUD,
+   Pause, Game-Over, etc.) and wires Unity-UI buttons to high-level actions
+   in other systems.  All scene UIs are therefore driven from one place,
+   keeping each canvas prefab “dumb”.
 
+ • Key interactions  
+   – Calls GameManager.I.ChangeState / RestartLevel to drive scene flow.  
+   – Subscribes to no events directly, but *publishes* UI intent such as
+     instruction requests via GameEvents (Observer) so that gameplay
+     systems can react without referencing UI code.  
+   – Exposed UpdateKeyUI(int) lets the Key pickup logic update the HUD
+     counter without needing to know which canvas is currently active.
 
+ • Why this design?  
+   1. Singleton ensures exactly one UIManager survives scene loads; every
+      other script can reach it via UIManager.I without cached links.  
+   2. Facade-style ShowXXX() methods hide the enable/disable bookkeeping
+      (Switch + Set) and prevent scattered scene code from touching raw
+      Canvas objects.  
+   3. Button listeners are attached once in Awake(); swapping a canvas or
+      adding a new button only requires editing the inspector, not code.  
+   4. Decoupling through GameManager and GameEvents keeps UI free from
+      game-play logic, so new states or overlays can be added by extending
+      GameState and dropping in another Canvas prefab.
+*/
 
 namespace UI
 {
@@ -143,37 +40,37 @@ namespace UI
     {
         public static UIManager I { get; private set; }
 
-        /*──────── Canvas 引用 ────────*/
+        /*──────── Canvas References ────────*/
         [Header("—— Canvas ——")]
         public Canvas mainMenu;
         public Canvas levelSelect;
         public Canvas hud;
-        public Canvas pauseMenu;       // ← 半透明暂停层
+        public Canvas pauseMenu;       // ← Translucent pause layer
         public Canvas gameOver;
-        public Canvas deathCanvas;     // “YOU DIED” 叠层
+        public Canvas deathCanvas;     // “YOU DIED” overlay
 
-        /*──────── 按钮引用 ────────*/
-        [Header("—— 主菜单按钮 ——")]
+        /*──────── Button References ────────*/
+        [Header("—— Main Menu Buttons ——")]
         public Button playButton;
         public Button quitButton;
 
-        [Header("—— GameOver / Death 按钮 ——")]
+        [Header("—— GameOver / Death Buttons ——")]
         public Button retryButton;
         public Button menuButton;
-        public Button restartButton;   // 死亡层 Restart
+        public Button restartButton;   // Dead layer Restart
 
         [Header("—— Pause ——")]
-        public Button pauseButton;     // HUD 右上角 ⏸
+        public Button pauseButton;     // HUD top right ⏸
 
         [Header("—— Instruction ——")]
         public Button instructionButton;
 
-        [Header("—— GameEnd 按钮 ——")]
+        [Header("—— GameEnd Buttons ——")]
         public Button winMenuButton;
         public Button winQuitButton;
 
-        /*──────── 其它 UI（可选） ────────*/
-        // 将原来的Text改为TMP_Text
+        /*──────── Other UI (optional) ────────*/
+        
         public TMP_Text keyCounterText;
 
         /*──────────────────────────────*/
@@ -182,16 +79,16 @@ namespace UI
             if (I != null && I != this) { Destroy(gameObject); return; }
             I = this;
 
-            /* 主菜单 */
+            /* Main Menu */
             playButton?.onClick.AddListener(() => GameManager.I.ChangeState(GameState.LevelSelect));
             quitButton?.onClick.AddListener(Application.Quit);
 
-            /* 死亡 / GameOver */
+            /* Death / GameOver */
             retryButton ?.onClick.AddListener(() => GameManager.I.RestartLevel());
             menuButton  ?.onClick.AddListener(() => GameManager.I.ChangeState(GameState.Menu));
             restartButton?.onClick.AddListener(() => GameManager.I.RestartLevel());
 
-            /* 胜利层 */
+            /* Victory */
             winMenuButton?.onClick.AddListener(() => GameManager.I.ChangeState(GameState.Menu));
             winQuitButton?.onClick.AddListener(Application.Quit);
 
@@ -201,7 +98,7 @@ namespace UI
 
         }
 
-        /*──────── Canvas 切换 API ────────*/
+        /*──────── Canvas Switch API ────────*/
         public void ShowMenu()        => Switch(mainMenu);
         public void ShowLevelSelect() => Switch(levelSelect);
         public void ShowHUD()         => Switch(hud);
@@ -209,7 +106,7 @@ namespace UI
         public void ShowGameOver()    => Switch(gameOver);
         public void ShowDeath()       => Switch(deathCanvas);
 
-        /*──────── 私有工具 ────────*/
+        /*──────── Private tools ────────*/
         private void Switch(Canvas active)
         {
             Set(mainMenu,    active == mainMenu);

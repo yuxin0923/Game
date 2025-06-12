@@ -1,18 +1,28 @@
 using UnityEngine;
 
-/// <summary>
-/// 100% 自己写的瓦片 Raycast，看 from→to 之间是否被实心瓦片挡住。
-/// 算法：整数网格上的 Bresenham Line（也叫 Amanatides & Woo DDA），
-/// 每到达一个新栅格就调用 TilemapWorld.I.IsSolid(centerOfCell)。
-/// </summary>
+/*
+ LineOfSight.cs — Bresenham Tile Raycast
+ ---------------------------------------
+ Lightweight utility that answers: “Is the straight-line path between two
+ world points free of solid tiles?”  It converts both positions to tile
+ coordinates and walks the grid using the integer Bresenham / Amanatides-Woo
+ Digital Differential Analyzer, calling `TilemapWorld.I.IsSolid()` on every
+ cell encountered.
+
+ Returns
+   true  → line of sight is clear
+   false → blocked by at least one solid tile
+*/
+
+
 public static class LineOfSight
 {
-    /// <param name="from">世界坐标</param>
-    /// <param name="to">世界坐标</param>
-    /// <returns>true = 中间无遮挡 / false = 被墙挡住</returns>
+    /// <param name="from">World position</param>
+    /// <param name="to">World position</param>
+    /// <returns>true = unobstructed / false = blocked</returns>
     public static bool Clear(Vector2 from, Vector2 to)
     {
-        // 1. 把世界坐标 → 瓦片格坐标（整型）
+        // 1. World coordinates to tile grid coordinates (integer)
         Vector3Int a = TilemapWorld.I.solidTilemaps[0].WorldToCell(from);
         Vector3Int b = TilemapWorld.I.solidTilemaps[0].WorldToCell(to);
 
@@ -29,22 +39,22 @@ public static class LineOfSight
 
         while (true)
         {
-            // 2. 检查当前格是否实心
+            // 2. Check if the current frame is solid
             if (TilemapWorld.I.IsSolid(CellCenter(x, y)))
-                return false;                          // ↙ 被挡
+                return false;                          // ↙ blocked
 
-            if (x == endX && y == endY) break;        // 到终点
+            if (x == endX && y == endY) break;        // terminate
 
             int e2 = 2 * err;
             if (e2 > -dy) { err -= dy; x += stepX; }
-            if (e2 <  dx) { err += dx; y += stepY; }
+            if (e2 < dx) { err += dx; y += stepY; }
         }
-        return true;                                  // ↙ 全程无遮挡
+        return true;                                  // ↙ unobstructed
     }
 
     static Vector2 CellCenter(int x, int y)
     {
-        // 取第一张 Tilemap 的 transform，换算回世界中心点
+        // Take the transform of the first Tilemap and convert it back to the center of the world.
         var map = TilemapWorld.I.solidTilemaps[0];
         Vector3Int cell = new(x, y, 0);
         return map.GetCellCenterWorld(cell);

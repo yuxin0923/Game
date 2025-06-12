@@ -8,19 +8,19 @@ namespace UI
     [System.Serializable]
     public struct LevelInfo
     {
-        public string sceneName; // 要加载的 Scene 名称（Build Settings 里也要添加）
-        public Button button;    // Inspector 里把对应的 Button 拖进来
+        public string sceneName; // Scene name to load (also add in Build Settings)
+        public Button button;    
     }
 
     /// <summary>
-    /// 关卡选择菜单：只管按钮的锁定/点击，放在 UI 包里更直观
+    /// Level selection menu: only manages button locking/clicking, more intuitive to put in UI package
     /// </summary>
     public class LevelSelectMenuUI : MonoBehaviour
     {
-        [Header("关卡列表 (SceneName + Button)")]
+        [Header("Level List (SceneName + Button)")]
         public List<LevelInfo> levels;
 
-        [Header("第一个关卡默认解锁")]
+        [Header("First level unlocked by default")]
         public bool firstUnlocked = true;
 
         private void Start()
@@ -33,7 +33,7 @@ namespace UI
 
                 info.button.interactable = unlocked;
 
-                string sn = info.sceneName;  // 防止闭包引用问题
+                string sn = info.sceneName;  // Prevent closure capture issue
                 info.button.onClick.AddListener(() => SceneManager.LoadScene(sn));
             }
         }

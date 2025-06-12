@@ -1,21 +1,36 @@
 using System;
+/*
+ GameEvents.cs — Lightweight Event Hub (Observer / Event-Bus Pattern)
+ --------------------------------------------------------------------
+ Static delegate fields act as a central “message broker” so gameplay
+ systems can publish and subscribe without hard references:
+
+   • Player → (OnPlayerDied) → GameManager, UI, Audio
+   • Key pickup → (OnKeyCollected) → HUD counter
+   • Door logic → (OnDoorOpened string) → GameManager scene flow
+   • UI button → (OnInstructionRequested) → SceneLoader
+
+ This Observer/Event-Bus approach keeps components loosely coupled and
+ lets you add or remove listeners (e.g., achievements, analytics) without
+ modifying the emitters.
+*/
 
 namespace GameCore
 {
     public static class GameEvents
     {
-        /// <summary>玩家死亡时触发</summary>
+        /// <summary>Triggered when player dies</summary>
         public static Action OnPlayerDied;
 
-        /// <summary>钥匙收集时触发</summary>
+        /// <summary>Triggered when key is collected</summary>
         public static Action OnKeyCollected;
 
-        /// <summary>门打开时触发</summary>
+        /// <summary>Triggered when door is opened</summary>
         // public static Action OnDoorOpened;
 
-        public static Action<string> OnDoorOpened;   // <— 带 string
+        public static Action<string> OnDoorOpened;   
 
-        /* ☆ 新增：主菜单点 Instruction 时触发，没有参数 */
-        public static Action OnInstructionRequested;     // ← 就这一行
+        /* Triggered when the main menu requests Instructions, no parameters */
+        public static Action OnInstructionRequested;     
     }
 }

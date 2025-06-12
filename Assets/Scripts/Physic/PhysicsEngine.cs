@@ -1,44 +1,43 @@
-// using System.Collections.Generic;
-// using UnityEngine;
 
-// public class PhysicsEngine : MonoBehaviour
-// {
-//     public static PhysicsEngine I { get; private set; }
-
-//     [Header("Global")]
-//     public Vector2 gravity = new(0, -30);
-
-//     // ↓ 如果 C# 版本低，把 new() 换成 new List<SimplePhysicsBody>()
-//     readonly List<SimplePhysicsBody> bodies = new();
-    
-
-//     public void Register(SimplePhysicsBody b)   => bodies.Add(b);
-//     public void Unregister(SimplePhysicsBody b) => bodies.Remove(b);
-
-//     void Awake()
-//     {
-//         if (I && I != this) Destroy(gameObject);
-//         I = this;
-//     }
-
-//     void FixedUpdate()
-//     {
-//         float dt = Time.fixedDeltaTime;
-//         foreach (var b in bodies) b.Tick(dt);
-//     }
-// }
 using UnityEngine;
 using System.Collections.Generic;
+/*
+ PhysicsEngine.cs — Lightweight 2-D Kinematic Solver (Singleton + Service)
+ ------------------------------------------------------------------------
+ • Role  
+   Central “physics loop” that ticks every MovablePlatform first, then every 
+   SimplePhysicsBody, and finally resolves landings / platform-carry.  
+   Replaces Unity’s built-in physics with a deterministic, tile-friendly
+   scheme tailored to side-scrollers.
+
+ • Key interactions  
+   – Bodies / platforms self-register via Register/Unregister; the engine
+     stores them in private lists and exposes Platforms as read-only for
+     collision probes.  
+   – SimplePhysicsBody asks the engine for surface material and grounding
+     status but performs its own velocity integration.
+
+ • Why this design?  
+   1. **Singleton Service** Any script can join the physics system without
+      keeping scene references, and exactly one engine runs per frame.  
+   2. **Deterministic Ordering** By moving platforms before bodies, landing
+      penetration is resolved in a single place, avoiding per-object race
+      conditions.  
+   3. **Platform Carry** LateTick applies the platform’s movement delta to
+      grounded bodies, removing the need for dynamic parenting.  
+   4. **Extensibility** New features (slopes, one-way tiles, conveyor belts)
+      can be added inside this hub without touching individual body scripts.
+*/
 
 public class PhysicsEngine : MonoBehaviour
 {
     public static PhysicsEngine I { get; private set; }
 
-    // 1) 私有字段——一定要保留它，类内部所有 foreach(var p in platforms) 都要用它
+    // 1) Private field - make sure to keep it, all foreach(var p in platforms) inside the class should use it
     readonly List<SimplePhysicsBody> bodies     = new();
     readonly List<MovablePlatform> platforms    = new();
 
-    // 2) 对外暴露一个只读属性，供 SimplePhysicsBody 调用
+    // 2) Expose a read-only property for SimplePhysicsBody to access
     public IReadOnlyList<MovablePlatform> Platforms => platforms;
 
     public void Register(SimplePhysicsBody b)        => bodies.Add(b);
@@ -56,11 +55,11 @@ public class PhysicsEngine : MonoBehaviour
     {
         float dt = Time.fixedDeltaTime;
 
-        // 1) 先移动所有平台
+        // 1) Move all platforms first
         foreach (var p in platforms)
             p.Tick(dt);
 
-        // 2) 记录上一帧位置并更新刚体
+        // 2) Record previous frame positions and update rigidbodies
         int n = bodies.Count;
         var prevPos = new Vector3[n];
         for (int i = 0; i < n; i++)
@@ -68,7 +67,7 @@ public class PhysicsEngine : MonoBehaviour
         for (int i = 0; i < n; i++)
             bodies[i].Tick(dt);
 
-        // 3) 平台落地拦截（防止穿透）
+        // 3) Platform landing interception (prevent penetration)
         for (int i = 0; i < n; i++)
         {
             var b = bodies[i];
@@ -98,7 +97,7 @@ public class PhysicsEngine : MonoBehaviour
             }
         }
 
-        // 4) 载人 & 更新平台最后位置
+        // 4) Platform landing & update final positions
         foreach (var p in platforms)
         {
             Vector2 delta = p.MovementDelta;
