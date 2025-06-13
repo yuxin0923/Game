@@ -45,16 +45,40 @@ Game Programming
 | _Physics ambiguity_ | Custom `PhysicsEngine` Service | Deterministic order, no Unity-physics quirks |
 
 ---
+## 🔧 Extending & Maintaining
 
-## 🚀 Extending the Game
+Below is a **cook-book style** guide for common feature requests and upkeep
+tasks.  Everything is grouped by subsystem so you can jump straight to the
+package you care about.
 
-| Task | How-to |
-|------|--------|
-| **Add enemy behaviour** | `class ShootStrategy : IEnemyStrategy` → return in `StrategyFactory.Create()` |
-| **New player action** | `class DashCommand` → instantiate in `InputHandler` → bind key/axis |
-| **Extra HUD layer** | Add Canvas prefab → expose `ShowMyCanvas()` in **UIManager** |
-| **Listen to key pickup** | `GameEvents.OnKeyCollected += MyMethod;` |
-| **Replace physics** | Implement new solver inside **Physic**; gameplay code unchanged |
+| Area <br>(Package) |  Typical Task  | Where / How   | Why it stays isolated |
+|--------------------|---------------|---------------|------------------------|
+| **Physics** <br>(`Physic`) | **Add slopes / one-way platforms** | *CollisionDetector* → add a new overlap rule, *PhysicsEngine.Tick* → resolve before step 3 | Engines owns *all* contacts; bodies remain oblivious |
+| | **Create an “ice” or “mud” surface** | 1) `Assets/Create/Physic/Physics Material` ↗ <br>2) Set `friction` & drop onto a Tilemap layer in **TilemapWorld** | Material tables decouple surface feel from the solver |
+| | **Swap the entire solver** | Write `MyPhysicsEngine : MonoBehaviour`, duplicate registration API; disable the old engine in the scene | Bodies depend only on the **Service interface**, not the impl. |
+| | **Debug collisions** | Toggle _Gizmos_ on the `PhysicsEngine`, `SimplePhysicsBody` & `TilemapWorld` inspectors | Built-in wireframes reveal penetration / grounding errors |
+| **AI Enemy** <br>(`AIEnemy`) | **New behaviour** e.g., *Shoot* | `class ShootStrategy : IEnemyStrategy` → return it in `StrategyFactory.Create()` | Strategy Pattern means zero edits to *AIEnemyManager* |
+| | **Tune vision** | Adjust `sightRadius` / `fov` in the prefab; LOS is Bresenham, no physics raycast cost | Data-driven; no code touch |
+| **Player** <br>(`Player`, `InputSystem`) | **Add Dash** | 1) `class DashCommand : ICommand` <br>2) Instantiate in `InputHandler.Awake()` <br>3) Bind key/axis in Unity Input | Command Pattern cleanly separates input from action |
+| | **Refactor abilities** | Everything funnels through the Player façade (`Move()`, `Jump()`, etc.)—extend it, not the physics body | Keeps low-level motion code untouched |
+| **UI** <br>(`UI`) | **Extra overlay / HUD widget** | 1) Make Canvas prefab <br>2) Reference in `UIManager` inspector <br>3) Expose `ShowMyOverlay()` | UIManager is a *Facade/Mediator*; scenes remain UI-free |
+| | **Localise text** | Swap TMP assets; canvases only contain TMPro; scripts expose plain strings | Presentation layer alone changes—logic untouched |
+| **Game Flow** <br>(`GameCore`) | **Add new game state** (e.g., *Shop*) | 1) Add enum to `GameState` <br>2) Handle in `GameManager.ChangeState` switch <br>3) Add matching UI canvas | FSM centralises flow; no other system needs edits |
+| **World Objects** <br>(`World`) | **New interactive prop** | 1) Derive MonoBehaviour (e.g., `Spring`) <br>2) Publish/subscribe via `GameEvents` | Event-Bus removes direct dependencies |
+
+### ♻️  Maintenance Principles
+
+| Principle | Concrete Example |
+|-----------|------------------|
+| **Single Responsibility** | `SimplePhysicsBody` only integrates motion & tile queries—no input, no AI. |
+| **Open / Closed** | You can add `PhysicsMaterial` types or `IEnemyStrategy` without altering existing code. |
+| **Dependency Inversion** | High-level systems (input, AI) call *interfaces* (`ICommand`, `IEnemyStrategy`), never concrete classes. |
+| **Data-Driven Tuning** | Most numbers live in the Inspector or ScriptableObjects, enabling designers to iterate without a compile. |
+| **Editor-time Validation** | Duplicate singleton instances (`TilemapWorld`, `PhysicsEngine`) self-destruct with a warning. |
+
+Stick to these rules and the project will stay *approachable* for new
+contributors and *adaptable* for fresh gameplay ideas.
+
 
 ---
 
