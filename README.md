@@ -86,19 +86,12 @@ contributors and *adaptable* for fresh gameplay ideas.
 
 1. **Unity 2021.3 LTS** or later  
 2. `git clone` → open → press **▶️**  
-3. Launch *LevelSelect* scene to test every level instantly.
+
 
 > The project ships with the **legacy Input Manager** for brevity.  
 > Migrating to the new Input System only touches the `InputSystem` package.
 
----
 
-## 🤝 Contributing Guidelines
-
-* Respect package boundaries—communicate via interfaces or `GameEvents`.
-* Prefer **composition** (add components) to inheritance.
-* Keep method names _intent-based_: `Jump()`, `StartRecharge()`, never `SetVelocityY()`.
-* Submit PRs with isolated, well-named commits.
 
 ---
 
