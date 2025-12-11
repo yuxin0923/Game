@@ -4,6 +4,10 @@ Game Programming
 > **A three-layer, seven-package Unity project designed for _clarity, reuse,_ and _rapid feature growth_.**  
 > Hand this repo to another dev and they can ship a new mechanic without spelunking through spaghetti code.
 
+
+https://github.com/user-attachments/assets/0f01b2e5-c6cb-48e5-b5e8-20d8711017af
+
+
 ---
 
 ## 🏛 High-Level Architecture
